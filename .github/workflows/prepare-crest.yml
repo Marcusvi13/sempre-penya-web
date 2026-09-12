@@ -1,0 +1,115 @@
+name: Prepare Penya crest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/prepare-crest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch and recolor crest
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          curl --fail --location --retry 3 \
+            --output /tmp/cjb_logo.png \
+            "https://images.seeklogo.com/logo-png/3/1/club-joventut-badalona-juventud-de-badalona-logo-png_seeklogo-32106.png"
+          python - <<'PY'
+          from collections import Counter, deque
+          from pathlib import Path
+          from PIL import Image
+          import colorsys, math
+
+          src = Path('/tmp/cjb_logo.png')
+          out_path = Path('cjb_logo.png')
+
+          # Mateixa neteja de fons exterior que fa el build de l'app.
+          im = Image.open(src).convert('RGBA')
+          w, h = im.size
+          px = im.load()
+          q = deque()
+          seen = set()
+          for x in range(w):
+              q.append((x, 0)); q.append((x, h - 1))
+          for y in range(h):
+              q.append((0, y)); q.append((w - 1, y))
+
+          def exterior_clear(r, g, b, a):
+              return a > 0 and r >= 235 and g >= 235 and b >= 235
+
+          while q:
+              x, y = q.popleft()
+              if (x, y) in seen or x < 0 or y < 0 or x >= w or y >= h:
+                  continue
+              seen.add((x, y))
+              r, g, b, a = px[x, y]
+              if not exterior_clear(r, g, b, a):
+                  continue
+              px[x, y] = (r, g, b, 0)
+              q.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
+
+          bbox = im.getchannel('A').getbbox()
+          if not bbox:
+              raise RuntimeError('No s\'ha pogut preparar l\'escut')
+          left, top, right, bottom = bbox
+          pad = max(4, int(max(w, h) * 0.015))
+          im = im.crop((max(0,left-pad), max(0,top-pad), min(w,right+pad), min(h,bottom+pad)))
+
+          # Mateix verd validat de l'app: Pantone 343 / #005441.
+          TARGET = (0, 84, 65)
+          EXPECTED_SOURCE = (136, 147, 93)
+          pixels = list(im.getdata())
+          colours = Counter()
+          for r, g, b, a in pixels:
+              if a < 128:
+                  continue
+              h0, s0, v0 = colorsys.rgb_to_hsv(r/255, g/255, b/255)
+              if s0 >= 0.15 and 0.10 <= v0 <= 0.95:
+                  colours[(r,g,b)] += 1
+          source = colours.most_common(1)[0][0]
+          if math.sqrt(sum((source[i]-EXPECTED_SOURCE[i])**2 for i in range(3))) > 25:
+              raise RuntimeError(f'Color base inesperat: {source}')
+
+          source_h, _, _ = colorsys.rgb_to_hsv(source[0]/255, source[1]/255, source[2]/255)
+          source_luma = 0.2126*source[0] + 0.7152*source[1] + 0.0722*source[2]
+          result = []
+          for r,g,b,a in pixels:
+              if a == 0:
+                  result.append((r,g,b,a)); continue
+              h0,s0,v0 = colorsys.rgb_to_hsv(r/255,g/255,b/255)
+              hd = min(abs(h0-source_h), 1-abs(h0-source_h))
+              olive = s0 >= 0.075 and hd <= 0.055 and g > b*1.10 and g >= r*1.015
+              if not olive:
+                  result.append((r,g,b,a)); continue
+              luma = 0.2126*r + 0.7152*g + 0.0722*b
+              if luma >= source_luma:
+                  mix = min(1.0, (luma-source_luma)/max(1.0,255-source_luma))
+                  nr = round(TARGET[0]*(1-mix)+255*mix)
+                  ng = round(TARGET[1]*(1-mix)+255*mix)
+                  nb = round(TARGET[2]*(1-mix)+255*mix)
+              else:
+                  factor = max(0.0, luma/max(1.0,source_luma))
+                  nr = round(TARGET[0]*factor); ng = round(TARGET[1]*factor); nb = round(TARGET[2]*factor)
+              result.append((nr,ng,nb,a))
+          im.putdata(result)
+          im.save(out_path, 'PNG', optimize=True)
+          print('Escut web preparat amb #005441')
+          PY
+
+      - name: Commit crest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cjb_logo.png
+          git diff --cached --quiet && exit 0
+          git commit -m "Alinea l'escut web amb el verd Penya de l'app"
+          git push
