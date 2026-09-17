@@ -7,7 +7,7 @@
   <meta name="description" content="SEMPRE PENYA — totes les notícies de la Penya en un únic feed, amb el mateix esperit de l'app Android.">
   <link rel="canonical" href="https://semprepenya.cat/">
   <link rel="stylesheet" href="styles.css?v=6">
-  <link rel="stylesheet" href="visual-v53.css?v=2">
+  <link rel="stylesheet" href="visual-v53.css?v=3">
   <title>SEMPRE PENYA · Notícies</title>
 </head>
 <body>
@@ -30,20 +30,29 @@
     <section class="feed-column" aria-labelledby="news-title">
       <div class="feed-heading">
         <div>
-          <p class="eyebrow">ACTUALITAT VERD-I-NEGRA</p>
+          <p class="eyebrow">ACTUALITAT VERD-I-NEGRE</p>
           <h2 id="news-title">Notícies</h2>
         </div>
         <p id="updated-at" class="updated-at" aria-live="polite"></p>
       </div>
 
-      <nav class="filter-scroll" aria-label="Filtra per categoria">
-        <button class="filter-chip selected" data-section="Tots" type="button">Tots</button>
-        <button class="filter-chip" data-section="Partits" type="button">Partits</button>
-        <button class="filter-chip" data-section="Media" type="button">Media</button>
-        <button class="filter-chip" data-section="Mercat" type="button">Mercat</button>
-        <button class="filter-chip" data-section="Lesions" type="button">Lesions</button>
-        <button class="filter-chip favorite-chip" data-section="Favorits" type="button">★ Favorits</button>
-      </nav>
+      <div class="filters-toolbar">
+        <nav class="filter-scroll category-filters" aria-label="Filtra per categoria">
+          <button class="filter-chip selected" data-section="Tots" type="button">Tots</button>
+          <button class="filter-chip" data-section="Partits" type="button">Partits</button>
+          <button class="filter-chip" data-section="Media" type="button">Media</button>
+          <button class="filter-chip" data-section="Mercat" type="button">Mercat</button>
+          <button class="filter-chip" data-section="Lesions" type="button">Lesions</button>
+          <button class="filter-chip favorite-chip" data-section="Favorits" type="button">★ Favorits</button>
+        </nav>
+
+        <div class="source-search-wrap">
+          <button id="source-search-toggle" class="source-search-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
+            Cercador per Fonts
+          </button>
+          <div id="source-search-menu" class="source-search-menu" role="listbox" aria-label="Cercador per fonts" hidden></div>
+        </div>
+      </div>
 
       <div class="retention-row">
         <span>Es mostren els darrers 90 dies · ★ Els favorits es guarden en aquest navegador</span>
@@ -151,5 +160,6 @@
   <script src="app.js?v=6" defer></script>
   <script src="order-fix.js?v=1" defer></script>
   <script src="source-logos.js?v=1" defer></script>
+  <script src="source-search.js?v=1" defer></script>
 </body>
 </html>
