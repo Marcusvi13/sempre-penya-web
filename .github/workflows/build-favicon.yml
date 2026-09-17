@@ -22,8 +22,9 @@ jobs:
       - name: Genera favicon específic
         run: |
           python - <<'PY'
-          from PIL import Image
+          from PIL import Image, ImageDraw
 
+          GREEN = '#005441'
           src = Image.open('cjb_logo.png').convert('RGBA')
 
           # Retalla únicament el marge transparent original.
@@ -32,9 +33,19 @@ jobs:
           if bbox:
               src = src.crop(bbox)
 
-          def make_icon(size, logo_w_ratio=0.40, logo_h_ratio=0.78):
-              # Fons transparent: només l'escut, sense cercle exterior.
+          def make_icon(size, logo_w_ratio=0.50, logo_h_ratio=0.68, ring_ratio=0.035):
+              # Identitat pròpia de Sempre Penya: cercle blanc + filet verd + escut centrat.
               canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(canvas)
+
+              pad = max(1, round(size * 0.07))
+              ring = max(1, round(size * ring_ratio))
+              draw.ellipse(
+                  (pad, pad, size - pad - 1, size - pad - 1),
+                  fill='white',
+                  outline=GREEN,
+                  width=ring,
+              )
 
               max_w = max(1, round(size * logo_w_ratio))
               max_h = max(1, round(size * logo_h_ratio))
@@ -43,18 +54,16 @@ jobs:
               h = max(1, round(src.height * scale))
               logo = src.resize((w, h), Image.Resampling.LANCZOS)
 
-              # Centrat, amb una lleugera compensació vertical perquè visualment
-              # quedi equilibrat dins la pestanya del navegador.
               x = (size - w) // 2
               y = (size - h) // 2
               canvas.alpha_composite(logo, (x, y))
               return canvas
 
-          make_icon(64, 0.40, 0.80).save('favicon-64.png', optimize=True)
-          make_icon(32, 0.38, 0.78).save('favicon-32.png', optimize=True)
-          make_icon(180, 0.44, 0.82).save('apple-touch-icon.png', optimize=True)
+          make_icon(64, 0.50, 0.70).save('favicon-64.png', optimize=True)
+          make_icon(32, 0.48, 0.68).save('favicon-32.png', optimize=True)
+          make_icon(180, 0.52, 0.72).save('apple-touch-icon.png', optimize=True)
 
-          print('Favicon: escut sol, transparent, clarament més estret i amb més aire lateral')
+          print('Favicon Sempre Penya: cercle blanc distintiu, filet verd i escut centrat')
           PY
 
       - name: Conserva els favicons
@@ -65,6 +74,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Sense canvis.'
           else
-            git commit -m 'Genera favicon Penya estret i sense cercle'
+            git commit -m 'Genera favicon Sempre Penya amb cercle blanc'
             git push
           fi
