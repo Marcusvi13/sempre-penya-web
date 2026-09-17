@@ -7,9 +7,139 @@
   background: linear-gradient(45deg, #0B6F59 0%, #005441 52%, #002E24 100%);
 }
 
+/* Jerarquia editorial de la capçalera del feed. */
+.feed-heading .eyebrow {
+  font-size: 1.05rem;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+}
+
+.feed-heading #news-title {
+  font-size: 1.35rem;
+  line-height: 1.15;
+  margin-top: 0.18rem;
+}
+
 /* El recompte "N ENLLAÇOS · 90 DIES" va ser eliminat de la capçalera a v53.
    Es manté només el text informatiu «Es mostren els darrers 90 dies» al cos. */
 .feed-count {
+  display: none !important;
+}
+
+/* Barra de categories + cercador de fonts separat a la dreta. */
+.filters-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 2px;
+}
+
+.filters-toolbar .category-filters {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.source-search-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.source-search-toggle {
+  appearance: none;
+  border: 1px solid #005441;
+  background: #ffffff;
+  color: #005441;
+  border-radius: 999px;
+  min-height: 38px;
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.source-search-toggle:hover,
+.source-search-toggle:focus-visible,
+.source-search-toggle.active {
+  background: #e9f4f1;
+  outline: none;
+}
+
+.source-search-menu {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(65vh, 560px);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid rgba(0, 84, 65, 0.18);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgba(0, 46, 36, 0.18);
+}
+
+.source-menu-label {
+  padding: 8px 10px 5px;
+  color: #63716d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.source-menu-item,
+.source-menu-reset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #16211e;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.source-menu-item:hover,
+.source-menu-reset:hover,
+.source-menu-item.selected,
+.source-menu-reset.selected {
+  background: #edf6f3;
+  color: #004c3b;
+}
+
+.source-menu-name {
+  min-width: 0;
+}
+
+.source-menu-count {
+  flex: 0 0 auto;
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f0f3f2;
+  color: #61706c;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.source-menu-separator {
+  height: 1px;
+  margin: 9px 6px;
+  background: #dfe8e5;
+}
+
+/* L'antic carrusel de fonts queda anul·lat. */
+#source-filters {
   display: none !important;
 }
 
@@ -29,4 +159,26 @@
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
+}
+
+@media (max-width: 760px) {
+  .filters-toolbar {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .source-search-toggle {
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 0.82rem;
+  }
+
+  .source-search-menu {
+    position: fixed;
+    right: 12px;
+    left: 12px;
+    top: auto;
+    width: auto;
+    max-height: 58vh;
+  }
 }
