@@ -171,6 +171,13 @@
   object-position: center;
 }
 
+/* L'escut vertical del Club Joventut no s'ha de retallar com un avatar quadrat. */
+.source-logo-image[src$="cjb_logo.png"] {
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
+}
+
 @media (max-width: 760px) {
   .brand-copy h1 {
     font-size: 1.05rem;
