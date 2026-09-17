@@ -1,0 +1,14 @@
+/*
+ * SEMPRE PENYA — baseline visual canònic v0.6.24 · v53
+ * Vegeu docs/VISUAL_BASELINE_V53.md abans de canviar cap valor.
+ */
+
+.app-header {
+  background: linear-gradient(45deg, #0B6F59 0%, #005441 52%, #002E24 100%);
+}
+
+/* El recompte "N ENLLAÇOS · 90 DIES" va ser eliminat de la capçalera a v53.
+   Es manté només el text informatiu «Es mostren els darrers 90 dies» al cos. */
+.feed-count {
+  display: none !important;
+}
