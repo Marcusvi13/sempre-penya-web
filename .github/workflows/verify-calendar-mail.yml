@@ -1,0 +1,48 @@
+name: Verifica calendari i correu web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'calendar-mail.js'
+      - 'calendar-mail.css'
+      - 'index.html'
+      - '.github/workflows/verify-calendar-mail.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Comprova sintaxi JavaScript
+        run: node --check calendar-mail.js
+
+      - name: Comprova referències HTML
+        run: |
+          grep -q 'calendar-mail.css?v=1' index.html
+          grep -q 'calendar-mail.js?v=1' index.html
+
+      - name: Comprova CORS de subscripció
+        env:
+          ENDPOINT: https://busuaaaamcojjtavhrne.supabase.co/functions/v1/daily-summary-subscription
+          PUBLIC_KEY: sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8
+        run: |
+          code=$(curl -sS -o /tmp/options-body -D /tmp/options-headers -w '%{http_code}' -X OPTIONS "$ENDPOINT" \
+            -H 'Origin: https://semprepenya.cat' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: apikey,content-type')
+          test "$code" = '204'
+          grep -qi '^access-control-allow-origin: https://semprepenya.cat' /tmp/options-headers
+
+          code=$(curl -sS -o /tmp/post-body -D /tmp/post-headers -w '%{http_code}' -X POST "$ENDPOINT" \
+            -H 'Origin: https://semprepenya.cat' \
+            -H "apikey: $PUBLIC_KEY" \
+            -H 'Content-Type: application/json' \
+            --data '{"email":"not-an-email","action":"subscribe","source":"web"}')
+          test "$code" = '400'
+          grep -q 'invalid_email' /tmp/post-body
+          grep -qi '^access-control-allow-origin: https://semprepenya.cat' /tmp/post-headers
