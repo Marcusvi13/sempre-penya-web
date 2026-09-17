@@ -14,34 +14,54 @@ Aquesta és la referència visual que s'ha d'utilitzar per a la web i per a qual
 
 ## Logos / avatars de fonts
 
-Regla general acordada:
+### Font canònica dels recursos
 
-- Les fonts destacades utilitzen **logo/avatar oficial rodó**, estil perfil de Twitter/X.
-- Diàmetre visual de referència: **30 dp/px** dins del badge de font.
-- Les fonts ocasionals o no registrades utilitzen **inicials** com a fallback automàtic.
-- No s'han de substituir els logos validats per favicons genèrics ni versions aproximades trobades a internet.
-- Quan els PNG aprovats siguin importats a la web, s'han de guardar de forma persistent al repositori i no dependre d'URLs externes que puguin canviar.
+Els recursos exactes de la v53 s'han extret directament de l'APK publicat i es conserven a:
 
-Fonts destacades definides:
+- `assets/source-logos/`
+- `assets/source-logos/MANIFEST.txt`
 
-1. **Penya / Club Joventut Badalona** — escut oficial / compte `@Penya1930`.
-2. **ACB / Liga Endesa** — `@ACBCOM`.
-3. **Basketball Champions League** — `@BasketballCL`.
-4. **Badalona Comunicació** — `@bdncom`.
-5. **Esports BDN Comunicació** — `@Esports_bdncom` (avatar diferent del compte general).
-6. **L'Esportiu**.
-7. **Mundo Deportivo**.
-8. **SPORT**.
-9. **Gigantes**.
-10. **Sobre la Bocina**.
-11. **Eurohopes**.
+El manifest conserva per a cada imatge el nom, mida, SHA-256 i ruta original dins de l'APK. **Aquests fitxers són la font de veritat visual.** No s'han de substituir per favicons, captures o versions aproximades trobades a internet.
 
-### Històric important
+La recuperació és reproduïble mitjançant `.github/workflows/recover-v53-source-logos.yml`, que descarrega l'APK publicat, n'extreu els recursos `source_*` / `cjb_logo` i en genera el manifest.
 
-En versions anteriors es van validar recursos propis per ACB, Badalona Comunicació, Esports BDN, L'Esportiu, Mundo Deportivo, SPORT i Sobre la Bocina. També es va acordar que **Badalona Comunicació i Esports BDN no comparteixin avatar**. La versió final de referència és, però, la configuració visual de la v53.
+### Recursos presents realment a Android v0.6.24 · v53
+
+1. **Penya / Club Joventut Badalona** — `cjb_logo.png`.
+2. **ACB / Liga Endesa** — `source_acbcom.png`.
+3. **Basketball Champions League** — `source_basketballcl.png`.
+4. **Badalona Comunicació** — `source_bdncom.png`.
+5. **Esports BDN Comunicació** — `source_esports_bdncom.png` (recurs diferent del compte general).
+6. **Gigantes** — `source_gigantesbasket.png`.
+7. **L'Esportiu** — `source_lesportiucat.png`.
+8. **Mundo Deportivo** — `source_mundodeportivo.png`.
+9. **Sobre la Bocina** — `source_sobrelabocina.png`.
+10. **SPORT** — `source_sport.png`.
+
+**Eurohopes no té un recurs `source_*` dins de l'APK v53 extret.** Fins que s'aprovi expressament un logo nou, s'ha de mostrar amb el fallback d'inicials i no amb un avatar improvisat.
+
+### Regla de presentació web
+
+- Les fonts amb recurs validat utilitzen el PNG local corresponent.
+- A la web, el badge exterior és de 34 px i el logo/avatar visible és de **30 px, rodó**.
+- Les fonts ocasionals o sense recurs validat utilitzen **inicials** com a fallback automàtic.
+- El mapping es manté a `source-logos.js` i ha de contemplar variants normals del nom de la font.
+- L'ordre de matching és important: **Esports BDN** s'ha de detectar abans que **Badalona Comunicació** perquè tenen avatars diferents.
+
+## Com es va solucionar històricament el problema dels logos
+
+Abans de la v53 ja s'havia produït una pèrdua dels logos. La solució estable es va conservar al commit **`cf701c944567f4d9f228ee3803675fa7842a1c59` — «Conserva SourceBadge i logos exactes de la v22»**:
+
+1. es van recuperar els PNG exactes d'una APK anterior que es veia correctament;
+2. es van empaquetar a `assets/v22_source_logos.zip`;
+3. l'script de construcció els descomprimia dins `res/drawable`;
+4. `SourceBadge` aplicava un mapping explícit per `source_id` / nom de font;
+5. si la font no tenia logo validat, es mostraven inicials.
+
+La recuperació actual de v53 aplica el mateix principi, però millorat: **els recursos finals queden extrets de l'APK actual, versionats individualment al repositori i acompanyats d'un manifest criptogràfic**, de manera que no cal tornar a reconstruir-los de memòria.
 
 ## Principi de manteniment
 
-Abans de canviar cap color, gradient, mida de logo o mapping de font, revisar aquest fitxer. Si una futura versió modifica expressament algun d'aquests elements i queda validada, cal actualitzar primer aquesta baseline amb el número de versió nou i després aplicar el canvi a web/app.
+Abans de canviar cap color, degradat, mida de logo o mapping de font, revisar aquest fitxer i el `MANIFEST.txt`. Si una futura versió modifica expressament algun d'aquests elements i queda validada, cal actualitzar primer aquesta baseline amb el número de versió nou i després aplicar el canvi a web/app.
 
 Android v53 no s'ha de modificar com a conseqüència d'aquest document; serveix com a referència visual mentre la web es desenvolupa en paral·lel.
