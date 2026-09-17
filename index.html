@@ -4,60 +4,80 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#005441">
-  <meta name="description" content="SEMPRE PENYA — actualitat, calendari i seguiment de la Penya. Descarrega la darrera versió per Android.">
+  <meta name="description" content="SEMPRE PENYA — totes les notícies de la Penya en un únic feed, amb el mateix esperit de l'app Android.">
   <link rel="canonical" href="https://semprepenya.cat/">
-  <link rel="stylesheet" href="styles.css?v=3">
-  <title>SEMPRE PENYA</title>
+  <link rel="stylesheet" href="styles.css?v=4">
+  <title>SEMPRE PENYA · Notícies</title>
 </head>
 <body>
-  <main class="shell">
-    <section class="hero">
+  <header class="app-header">
+    <div class="header-inner">
       <div class="brand-row">
         <div class="crest-wrap"><img src="cjb_logo.png?v=3" alt="Escut del Club Joventut Badalona"></div>
-        <div>
-          <p class="eyebrow">BADALONA · BÀSQUET · PENYA</p>
+        <div class="brand-copy">
           <h1>SEMPRE PENYA</h1>
-          <p class="tagline">Tota la Penya, sempre a mà.</p>
+          <p id="feed-count" class="feed-count">CARREGANT NOTÍCIES…</p>
         </div>
       </div>
+      <div class="header-actions">
+        <button id="refresh" class="header-button secondary" type="button">Actualitza</button>
+        <a id="download" class="header-button" href="https://busuaaaamcojjtavhrne.supabase.co/storage/v1/object/public/app-downloads/sempre-penya-latest.apk">Android</a>
+      </div>
+    </div>
+  </header>
 
-      <div class="download-card">
+  <main class="page-shell">
+    <section class="feed-column" aria-labelledby="news-title">
+      <div class="feed-heading">
         <div>
-          <p class="label">Darrera versió disponible</p>
-          <p id="version" class="version">v0.6.24 - v53</p>
+          <p class="eyebrow">ACTUALITAT VERD-I-NEGRA</p>
+          <h2 id="news-title">Notícies</h2>
         </div>
-        <a id="download" class="download-button" href="https://busuaaaamcojjtavhrne.supabase.co/storage/v1/object/public/app-downloads/sempre-penya-latest.apk">Descarrega per Android</a>
-        <p class="apk-note">APK per Android · la web apunta sempre a la versió més recent publicada.</p>
+        <p id="updated-at" class="updated-at" aria-live="polite"></p>
       </div>
+
+      <nav class="filter-scroll" aria-label="Filtra per categoria">
+        <button class="filter-chip selected" data-section="Tots" type="button">Tots</button>
+        <button class="filter-chip" data-section="Partits" type="button">Partits</button>
+        <button class="filter-chip" data-section="Media" type="button">Media</button>
+        <button class="filter-chip" data-section="Mercat" type="button">Mercat</button>
+        <button class="filter-chip" data-section="Lesions" type="button">Lesions</button>
+        <button class="filter-chip favorite-chip" data-section="Favorits" type="button">★ Favorits</button>
+      </nav>
+
+      <div class="retention-row">
+        <span>Es mostren els darrers 90 dies · ★ Els favorits es guarden en aquest navegador</span>
+      </div>
+
+      <div id="source-filters" class="filter-scroll source-filters" aria-label="Filtra per font" hidden></div>
+
+      <div id="feed-message" class="feed-message" role="status" hidden></div>
+      <div id="news-list" class="news-list" aria-live="polite" aria-busy="true"></div>
+      <div id="empty-state" class="empty-state" hidden>Encara no hi ha enllaços amb aquests filtres.</div>
     </section>
 
-    <section class="grid">
-      <article class="panel">
-        <h2>Què hi trobaràs</h2>
-        <p>Notícies de la Penya, calendari, resultats, classificacions i accés ràpid a les fonts més rellevants.</p>
-      </article>
-      <article class="panel">
-        <h2>Novetats</h2>
-        <p id="changes">Recompte anònim i agregat d’instal·lacions, sense identificadors de dispositiu.</p>
-      </article>
-      <article class="panel full">
-        <h2>D'on surt aquesta app?</h2>
-        <p>Aquest projecte va sorgir de la necessitat de trobar les novetats de la Penya de manera fàcil i ràpida; l’objectiu final era poder fer una app funcional on centralitzar-ho tot. A poc a poc va anar prenent forma i, com que sorprenentment el resultat final em sembla prou presentable, m’he decidit a compartir-la amb tots aquells penyer@s que vulgueu estar sobreinformats de la Penya i no us en vulgueu perdre cap detall.</p>
-        <p>Dit tot això, tingueu en compte que aquesta joguina està optimitzada per al meu mòbil, el meu tipus de lletra i diverses configuracions personals. És la meva joguina i a mi em funciona perfectament, però no sóc informàtic i no puc garantir que funcioni bé a tot arreu; creuem els dits.</p>
-        <p>A gaudir del nostre equip, penyer@s!!!</p>
-      </article>
-      <article class="panel full">
-        <h2>Instal·lació</h2>
-        <p>Descarrega l’APK i obre’l al mòbil. Android pot demanar permís per instal·lar aplicacions procedents del navegador o del gestor de fitxers.</p>
-      </article>
-      <article class="panel full">
-        <h2>Privacitat</h2>
-        <p>Per saber quantes instal·lacions té l’app, la primera obertura incrementa una sola vegada un comptador agregat. Només s’envien la versió de l’app i el número de versió; no s’envia cap identificador del dispositiu ni cap dada personal.</p>
-      </article>
-    </section>
+    <aside class="side-column">
+      <section class="side-card download-card">
+        <p class="side-label">APP ANDROID</p>
+        <h2>SEMPRE PENYA</h2>
+        <p id="version" class="version">v0.6.24 · v53</p>
+        <p>La web i l’app consulten el mateix feed. Pots continuar fent servir l’Android exactament com fins ara.</p>
+        <a class="download-button" href="https://busuaaaamcojjtavhrne.supabase.co/storage/v1/object/public/app-downloads/sempre-penya-latest.apk" id="download-side">Descarrega l’app</a>
+      </section>
 
-    <footer>SEMPRE PENYA és un projecte independent de seguiment del Club Joventut Badalona.</footer>
+      <section class="side-card">
+        <p class="side-label">SOBRE EL PROJECTE</p>
+        <p>Actualitat de la Penya centralitzada en un únic lloc, amb accés directe a la font original de cada notícia.</p>
+        <p class="small">SEMPRE PENYA és un projecte independent de seguiment del Club Joventut Badalona.</p>
+      </section>
+    </aside>
   </main>
-  <script src="app.js" defer></script>
+
+  <footer>
+    <span>SEMPRE PENYA</span>
+    <span>Badalona · Bàsquet · Penya</span>
+  </footer>
+
+  <script src="app.js?v=4" defer></script>
 </body>
 </html>
