@@ -148,6 +148,10 @@
     const list = document.getElementById('calendar-list');
     if (!list) return;
     list.innerHTML = '<p class="calendar-loading">Actualitzant calendari…</p>';
+    list.style.maxHeight = 'min(65vh, 560px)';
+    list.style.overflowY = 'auto';
+    list.style.overscrollBehavior = 'contain';
+    list.style.paddingRight = '4px';
     if (message) message.hidden = true;
 
     let live = new Map();
@@ -180,12 +184,22 @@
     const future = games.filter((game) => !game.played && gameDay(game) >= today);
     const next = future[0] || null;
     const nextDay = next ? gameDay(next) : '9999-12-31';
-    const previous = games.filter((game) => game.played && gameDay(game) < nextDay).slice(-2);
+    const playedBeforeNext = games.filter((game) => game.played && gameDay(game) < nextDay);
+    const previous = playedBeforeNext.slice(-2);
+    const older = playedBeforeNext.slice(0, -2);
     const later = next ? future.slice(1) : [];
 
     list.replaceChildren();
+    if (older.length) {
+      list.append(sectionLabel('Partits anteriors'));
+      older.forEach((game) => list.append(gameCard(game, false)));
+    }
+
+    let focusAnchor = null;
     if (previous.length) {
-      list.append(sectionLabel('Darrers partits'));
+      focusAnchor = sectionLabel('Darrers partits');
+      focusAnchor.dataset.calendarFocus = 'true';
+      list.append(focusAnchor);
       previous.forEach((game) => list.append(gameCard(game, false)));
     }
     if (next) {
@@ -196,9 +210,20 @@
       list.append(sectionLabel('Pròxims partits'));
       later.forEach((game) => list.append(gameCard(game, false)));
     }
-    if (!previous.length && !next && !later.length) {
+    if (!playedBeforeNext.length && !next && !later.length) {
       list.innerHTML = '<p class="calendar-loading">No hi ha més partits programats.</p>';
+      return;
     }
+
+    requestAnimationFrame(() => {
+      if (!focusAnchor || !older.length) {
+        list.scrollTop = 0;
+        return;
+      }
+      const listRect = list.getBoundingClientRect();
+      const anchorRect = focusAnchor.getBoundingClientRect();
+      list.scrollTop += anchorRect.top - listRect.top - 2;
+    });
   }
 
   function sectionLabel(text) {
