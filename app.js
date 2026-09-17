@@ -17,6 +17,10 @@ const adminSession = {
   email: sessionStorage.getItem('semprePenyaAdminEmail') || ''
 };
 
+const adminEditor = {
+  itemId: null
+};
+
 const $ = (id) => document.getElementById(id);
 
 function loadFavorites() {
@@ -248,6 +252,16 @@ function createNewsCard(item) {
   const actions = document.createElement('div');
   actions.className = 'news-actions';
 
+  if (adminSession.token) {
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'admin-edit-button';
+    edit.textContent = 'Edita';
+    edit.setAttribute('aria-label', `Edita ${item.title || 'aquesta notícia'}`);
+    edit.addEventListener('click', () => openAdminModal(item.id));
+    actions.append(edit);
+  }
+
   const favorite = document.createElement('button');
   favorite.type = 'button';
   favorite.className = `favorite-button${state.favorites.has(item.id) ? ' active' : ''}`;
@@ -360,6 +374,7 @@ function clearAdminSession() {
   adminSession.email = '';
   sessionStorage.removeItem('semprePenyaAdminToken');
   sessionStorage.removeItem('semprePenyaAdminEmail');
+  renderFeed();
 }
 
 function persistAdminSession(token, email) {
@@ -391,7 +406,61 @@ async function verifyAdmin(token) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
-async function openAdminModal() {
+function selectedRadio(name, fallback) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value || fallback;
+}
+
+function setRadio(name, value, fallback) {
+  const target = document.querySelector(`input[name="${name}"][value="${value}"]`)
+    || document.querySelector(`input[name="${name}"][value="${fallback}"]`);
+  if (target) target.checked = true;
+}
+
+function resetAdminPublishForm() {
+  adminEditor.itemId = null;
+  $('admin-url').value = '';
+  $('admin-title-input').value = '';
+  $('admin-source').value = '';
+  $('admin-context').value = '';
+  $('admin-tag').value = '';
+  $('admin-rumor').checked = false;
+  setRadio('admin-section', 'General', 'General');
+  setRadio('admin-importance', 'Normal', 'Normal');
+  $('admin-title').textContent = 'Mode administrador';
+  $('admin-form-mode').textContent = 'Publica una notícia manual al mateix feed que consulta Android.';
+  $('admin-publish').textContent = 'Publicar';
+  $('admin-retire').hidden = true;
+  $('admin-cancel-edit').hidden = true;
+}
+
+function fillAdminEditForm(item) {
+  if (!item) {
+    resetAdminPublishForm();
+    return;
+  }
+  adminEditor.itemId = item.id;
+  $('admin-url').value = item.url || '';
+  $('admin-title-input').value = item.title || '';
+  $('admin-source').value = item.source || '';
+  $('admin-context').value = item.context || '';
+  $('admin-tag').value = item.tag || '';
+  $('admin-rumor').checked = Boolean(item.is_rumor);
+  setRadio('admin-section', item.section === 'Altres' ? 'General' : item.section, 'General');
+  setRadio('admin-importance', item.importance || 'Normal', 'Normal');
+  $('admin-title').textContent = 'Edita la notícia';
+  $('admin-form-mode').textContent = 'Els canvis s’apliquen a la mateixa fila de Supabase i es reflectiran també a l’app Android.';
+  $('admin-publish').textContent = 'Desa els canvis';
+  $('admin-retire').hidden = false;
+  $('admin-cancel-edit').hidden = false;
+}
+
+function pendingAdminItem() {
+  if (!adminEditor.itemId) return null;
+  return state.items.find((item) => item.id === adminEditor.itemId) || null;
+}
+
+async function openAdminModal(itemId = null) {
+  adminEditor.itemId = itemId || null;
   $('admin-modal').hidden = false;
   document.body.classList.add('modal-open');
   setFormMessage('admin-login-error', '');
@@ -402,10 +471,15 @@ async function openAdminModal() {
     const valid = await verifyAdmin(adminSession.token).catch(() => false);
     if (valid) {
       setAdminView(true);
+      const item = pendingAdminItem();
+      if (item) fillAdminEditForm(item);
+      else resetAdminPublishForm();
+      renderFeed();
       return;
     }
     clearAdminSession();
   }
+
   setAdminView(false);
   if (adminSession.email) $('admin-email').value = adminSession.email;
 }
@@ -413,6 +487,7 @@ async function openAdminModal() {
 function closeAdminModal() {
   $('admin-modal').hidden = true;
   document.body.classList.remove('modal-open');
+  adminEditor.itemId = null;
 }
 
 async function adminLogin() {
@@ -437,6 +512,10 @@ async function adminLogin() {
     persistAdminSession(data.access_token, email);
     $('admin-password').value = '';
     setAdminView(true);
+    const item = pendingAdminItem();
+    if (item) fillAdminEditForm(item);
+    else resetAdminPublishForm();
+    renderFeed();
   } catch (error) {
     clearAdminSession();
     setAdminView(false);
@@ -447,22 +526,7 @@ async function adminLogin() {
   }
 }
 
-function selectedRadio(name, fallback) {
-  return document.querySelector(`input[name="${name}"]:checked`)?.value || fallback;
-}
-
-function resetAdminPublishForm() {
-  $('admin-url').value = '';
-  $('admin-title-input').value = '';
-  $('admin-source').value = '';
-  $('admin-context').value = '';
-  $('admin-tag').value = '';
-  $('admin-rumor').checked = false;
-  document.querySelector('input[name="admin-section"][value="General"]').checked = true;
-  document.querySelector('input[name="admin-importance"][value="Normal"]').checked = true;
-}
-
-async function adminPublish() {
+function buildAdminPayload() {
   const url = $('admin-url').value.trim();
   const title = $('admin-title-input').value.trim();
   const source = $('admin-source').value.trim() || 'Afegit manualment';
@@ -472,51 +536,77 @@ async function adminPublish() {
   const section = selectedSection === 'General' ? 'Altres' : selectedSection;
   const importance = selectedRadio('admin-importance', 'Normal');
   const isRumor = $('admin-rumor').checked;
-  const button = $('admin-publish');
 
+  if (!safeUrl(url) || !title) {
+    throw new Error('Cal indicar un enllaç http/https vàlid i un titular.');
+  }
+
+  return {
+    url,
+    title,
+    source,
+    context,
+    tag,
+    section,
+    importance,
+    is_rumor: isRumor,
+    is_media: selectedSection === 'Media'
+  };
+}
+
+async function adminPublishOrSave() {
+  const button = $('admin-publish');
   setFormMessage('admin-publish-error', '');
   setFormMessage('admin-publish-ok', '');
 
-  if (!safeUrl(url) || !title) {
-    setFormMessage('admin-publish-error', 'Cal indicar un enllaç http/https vàlid i un titular.');
-    return;
-  }
   if (!adminSession.token) {
     setFormMessage('admin-publish-error', 'La sessió d’administrador ha caducat. Torna a entrar.');
     setAdminView(false);
     return;
   }
 
+  let payload;
+  try {
+    payload = buildAdminPayload();
+  } catch (error) {
+    setFormMessage('admin-publish-error', error.message);
+    return;
+  }
+
+  const editing = Boolean(adminEditor.itemId);
   button.disabled = true;
-  button.textContent = 'Publicant…';
-  const now = new Date().toISOString();
-  const item = {
-    id: `manual-${Date.now()}`,
-    title,
-    source,
-    source_id: 'manual',
-    context,
-    url,
-    published_at: now,
-    detected_at: now,
-    section,
-    tag,
-    type: 'noticia',
-    importance,
-    is_rumor: isRumor,
-    is_media: selectedSection === 'Media',
-    published: true
-  };
+  button.textContent = editing ? 'Desant…' : 'Publicant…';
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/news`, {
-      method: 'POST',
+    let endpoint = `${SUPABASE_URL}/rest/v1/news`;
+    let method = 'POST';
+    let body = payload;
+
+    if (editing) {
+      endpoint += `?id=eq.${encodeURIComponent(adminEditor.itemId)}`;
+      method = 'PATCH';
+    } else {
+      const now = new Date().toISOString();
+      body = {
+        id: `manual-${Date.now()}`,
+        ...payload,
+        source_id: 'manual',
+        published_at: now,
+        detected_at: now,
+        type: 'noticia',
+        published: true
+      };
+    }
+
+    const response = await fetch(endpoint, {
+      method,
       headers: {
         ...adminHeaders(adminSession.token),
         Prefer: 'return=minimal'
       },
-      body: JSON.stringify(item)
+      body: JSON.stringify(body)
     });
+
     if (response.status === 401 || response.status === 403) {
       clearAdminSession();
       setAdminView(false);
@@ -524,16 +614,62 @@ async function adminPublish() {
     }
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || data.details || `No s’ha pogut publicar (HTTP ${response.status})`);
+      throw new Error(data.message || data.details || `No s’ha pogut desar (HTTP ${response.status})`);
     }
+
+    const message = editing
+      ? 'Canvis desats. Android i web llegiran aquesta mateixa versió.'
+      : 'Publicada. Ja forma part del mateix feed que consulta Android.';
     resetAdminPublishForm();
-    setFormMessage('admin-publish-ok', 'Publicada. Ja forma part del mateix feed que consulta Android.');
+    setFormMessage('admin-publish-ok', message);
     await loadFeed();
   } catch (error) {
-    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut publicar.');
+    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut desar.');
   } finally {
     button.disabled = false;
-    button.textContent = 'Publicar';
+    button.textContent = adminEditor.itemId ? 'Desa els canvis' : 'Publicar';
+  }
+}
+
+async function adminRetire() {
+  const item = pendingAdminItem();
+  if (!item || !adminSession.token) return;
+  if (!window.confirm(`Vols retirar del feed «${item.title}»? La notícia quedarà a Supabase, però Android i web deixaran de mostrar-la.`)) return;
+
+  const button = $('admin-retire');
+  setFormMessage('admin-publish-error', '');
+  setFormMessage('admin-publish-ok', '');
+  button.disabled = true;
+  button.textContent = 'Retirant…';
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?id=eq.${encodeURIComponent(item.id)}`, {
+      method: 'PATCH',
+      headers: {
+        ...adminHeaders(adminSession.token),
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify({ published: false })
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      clearAdminSession();
+      setAdminView(false);
+      throw new Error('La sessió ha caducat o ja no té permisos d’administrador.');
+    }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || data.details || `No s’ha pogut retirar (HTTP ${response.status})`);
+    }
+
+    resetAdminPublishForm();
+    setFormMessage('admin-publish-ok', 'Retirada del feed. Deixarà d’aparèixer tant a la web com a Android en actualitzar.');
+    await loadFeed();
+  } catch (error) {
+    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut retirar.');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Retira del feed';
   }
 }
 
@@ -548,9 +684,16 @@ document.querySelectorAll('[data-section]').forEach((button) => {
 $('refresh').addEventListener('click', loadFeed);
 $('admin-close').addEventListener('click', closeAdminModal);
 $('admin-login').addEventListener('click', adminLogin);
-$('admin-publish').addEventListener('click', adminPublish);
+$('admin-publish').addEventListener('click', adminPublishOrSave);
+$('admin-retire').addEventListener('click', adminRetire);
+$('admin-cancel-edit').addEventListener('click', () => {
+  resetAdminPublishForm();
+  setFormMessage('admin-publish-error', '');
+  setFormMessage('admin-publish-ok', '');
+});
 $('admin-logout').addEventListener('click', () => {
   clearAdminSession();
+  resetAdminPublishForm();
   setAdminView(false);
 });
 $('admin-modal').addEventListener('click', (event) => {
