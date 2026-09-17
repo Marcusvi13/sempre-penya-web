@@ -12,3 +12,21 @@
 .feed-count {
   display: none !important;
 }
+
+/* Logos de font extrets directament de l'APK v53.
+   Badge exterior de 34 px; avatar/logo visible de 30 px, rodó.
+   Les fonts sense recurs validat continuen mostrant inicials. */
+.source-badge.has-source-logo {
+  padding: 1px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.source-logo-image {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
