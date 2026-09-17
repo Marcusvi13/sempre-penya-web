@@ -1,0 +1,81 @@
+name: Recupera logos v53
+
+on:
+  push:
+    paths:
+      - '.github/workflows/recover-v53-source-logos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Descarrega APK v53 publicat
+        run: |
+          curl --fail --location --retry 5 \
+            -o sempre-penya-v53.apk \
+            'https://busuaaaamcojjtavhrne.supabase.co/storage/v1/object/public/app-downloads/sempre-penya-latest.apk'
+
+      - name: Extreu logos de fonts i crea manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import zipfile
+
+          apk = Path('sempre-penya-v53.apk')
+          out = Path('assets/source-logos')
+          out.mkdir(parents=True, exist_ok=True)
+
+          with zipfile.ZipFile(apk) as zf:
+              names = zf.namelist()
+              wanted = []
+              for name in names:
+                  base = Path(name).name.lower()
+                  if not base.endswith(('.png', '.webp', '.jpg', '.jpeg')):
+                      continue
+                  if base.startswith('source_') or base.startswith('cjb_logo'):
+                      wanted.append(name)
+
+              if not wanted:
+                  candidates = [
+                      n for n in names
+                      if n.startswith('res/') and n.lower().endswith(('.png', '.webp', '.jpg', '.jpeg'))
+                  ]
+                  (out / 'APK_IMAGE_CANDIDATES.txt').write_text('\n'.join(candidates) + '\n')
+                  raise SystemExit('No s’han trobat source_* ni cjb_logo dins l’APK; queda llistat de candidats.')
+
+              rows = []
+              for name in sorted(wanted):
+                  data = zf.read(name)
+                  dest = out / Path(name).name
+                  dest.write_bytes(data)
+                  rows.append(
+                      f'{dest.name}\t{len(data)} bytes\tsha256={hashlib.sha256(data).hexdigest()}\torigen={name}'
+                  )
+
+          (out / 'MANIFEST.txt').write_text(
+              'SEMPRE PENYA — recursos extrets directament de l’APK v0.6.24 · v53\n'
+              'No substituir per favicons ni aproximacions sense validació explícita.\n\n'
+              + '\n'.join(rows) + '\n'
+          )
+          print('\n'.join(rows))
+          PY
+
+      - name: Conserva els recursos al repositori
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/source-logos
+          if git diff --cached --quiet; then
+            echo 'No hi ha canvis a conservar.'
+          else
+            git commit -m 'Conserva logos exactes extrets de l APK v53'
+            git push
+          fi
