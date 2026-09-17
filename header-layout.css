@@ -1,0 +1,117 @@
+/* SEMPRE PENYA — disposició compacta dels controls de la capçalera. */
+
+.header-inner {
+  min-height: 82px;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.header-refresh-button {
+  margin-top: 7px;
+  min-height: 27px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 8px;
+  padding: 0 9px;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font-size: .70rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.header-refresh-button:hover {
+  background: rgba(255,255,255,.15);
+}
+
+.header-refresh-button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 5px;
+  width: auto;
+  flex-wrap: nowrap;
+}
+
+.header-actions .feature-header-button {
+  min-width: 128px;
+  min-height: 29px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: .70rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .header-inner {
+    width: calc(100% - 20px);
+    min-height: 76px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .brand-row {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .brand-copy h1 {
+    white-space: nowrap;
+  }
+
+  .header-refresh-button {
+    margin-top: 5px;
+    min-height: 25px;
+    padding: 0 8px;
+    font-size: .66rem;
+  }
+
+  .header-actions {
+    width: auto;
+    flex: 0 0 auto;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .header-actions .feature-header-button {
+    min-width: 116px;
+    min-height: 27px;
+    padding: 0 8px;
+    font-size: .66rem;
+  }
+}
+
+@media (max-width: 370px) {
+  .crest-wrap {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .brand-row {
+    gap: 8px;
+  }
+
+  .brand-copy h1 {
+    font-size: .90rem;
+  }
+
+  .header-actions .feature-header-button {
+    min-width: 108px;
+    font-size: .62rem;
+  }
+}
