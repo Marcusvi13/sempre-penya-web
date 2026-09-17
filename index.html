@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#005441">
   <meta name="description" content="SEMPRE PENYA — totes les notícies de la Penya en un únic feed, amb el mateix esperit de l'app Android.">
   <link rel="canonical" href="https://semprepenya.cat/">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <title>SEMPRE PENYA · Notícies</title>
 </head>
 <body>
@@ -15,7 +15,7 @@
       <div class="brand-row">
         <div class="crest-wrap"><img src="cjb_logo.png?v=3" alt="Escut del Club Joventut Badalona"></div>
         <div class="brand-copy">
-          <h1>SEMPRE PENYA</h1>
+          <h1 id="admin-trigger">SEMPRE PENYA</h1>
           <p id="feed-count" class="feed-count">CARREGANT NOTÍCIES…</p>
         </div>
       </div>
@@ -78,6 +78,73 @@
     <span>Badalona · Bàsquet · Penya</span>
   </footer>
 
-  <script src="app.js?v=4" defer></script>
+  <div id="admin-modal" class="modal-backdrop" hidden>
+    <section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+      <div class="modal-heading">
+        <div>
+          <p class="side-label">SEMPRE PENYA</p>
+          <h2 id="admin-title">Mode administrador</h2>
+        </div>
+        <button id="admin-close" class="icon-button" type="button" aria-label="Tanca">×</button>
+      </div>
+
+      <div id="admin-login-view">
+        <p class="admin-help">Identifica’t amb el mateix compte administrador de Supabase que utilitza l’app.</p>
+        <label class="field-label" for="admin-email">Correu administrador</label>
+        <input id="admin-email" class="field-input" type="email" autocomplete="username">
+        <label class="field-label" for="admin-password">Contrasenya</label>
+        <input id="admin-password" class="field-input" type="password" autocomplete="current-password">
+        <p id="admin-login-error" class="form-error" role="alert" hidden></p>
+        <div class="form-actions"><button id="admin-login" class="primary-action" type="button">Entrar</button></div>
+      </div>
+
+      <div id="admin-publish-view" hidden>
+        <div class="admin-session-row">
+          <strong id="admin-session-email"></strong>
+          <button id="admin-logout" class="text-button" type="button">Surt</button>
+        </div>
+
+        <label class="field-label" for="admin-url">Enllaç</label>
+        <input id="admin-url" class="field-input" type="url" placeholder="https://…">
+        <label class="field-label" for="admin-title-input">Titular</label>
+        <input id="admin-title-input" class="field-input" type="text">
+        <label class="field-label" for="admin-source">Font</label>
+        <input id="admin-source" class="field-input" type="text">
+        <label class="field-label" for="admin-context">Context breu</label>
+        <textarea id="admin-context" class="field-input" rows="3"></textarea>
+        <label class="field-label" for="admin-tag">Etiqueta (opcional)</label>
+        <input id="admin-tag" class="field-input" type="text">
+
+        <fieldset class="choice-group">
+          <legend>Categoria</legend>
+          <div class="choice-row">
+            <label><input type="radio" name="admin-section" value="General" checked> General</label>
+            <label><input type="radio" name="admin-section" value="Partits"> Partits</label>
+            <label><input type="radio" name="admin-section" value="Media"> Mèdia</label>
+            <label><input type="radio" name="admin-section" value="Mercat"> Mercat</label>
+            <label><input type="radio" name="admin-section" value="Lesions"> Lesions</label>
+          </div>
+        </fieldset>
+
+        <fieldset class="choice-group">
+          <legend>Importància</legend>
+          <div class="choice-row">
+            <label><input type="radio" name="admin-importance" value="Normal" checked> Normal</label>
+            <label><input type="radio" name="admin-importance" value="Important"> Important</label>
+          </div>
+          <p class="choice-note">«Important» queda marcada igual que a l’app i pot ser utilitzada pel sistema de notificacions Android.</p>
+        </fieldset>
+
+        <label class="checkbox-row"><input id="admin-rumor" type="checkbox"> És un rumor</label>
+        <p id="admin-publish-error" class="form-error" role="alert" hidden></p>
+        <p id="admin-publish-ok" class="form-ok" role="status" hidden></p>
+        <div class="form-actions">
+          <button id="admin-publish" class="primary-action" type="button">Publicar</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js?v=5" defer></script>
 </body>
 </html>
