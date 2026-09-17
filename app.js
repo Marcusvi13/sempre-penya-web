@@ -12,6 +12,11 @@ const state = {
   loading: false
 };
 
+const adminSession = {
+  token: sessionStorage.getItem('semprePenyaAdminToken') || '',
+  email: sessionStorage.getItem('semprePenyaAdminEmail') || ''
+};
+
 const $ = (id) => document.getElementById(id);
 
 function loadFavorites() {
@@ -340,6 +345,198 @@ async function loadFeed() {
   }
 }
 
+function adminHeaders(token = '') {
+  const headers = {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+function clearAdminSession() {
+  adminSession.token = '';
+  adminSession.email = '';
+  sessionStorage.removeItem('semprePenyaAdminToken');
+  sessionStorage.removeItem('semprePenyaAdminEmail');
+}
+
+function persistAdminSession(token, email) {
+  adminSession.token = token;
+  adminSession.email = email;
+  sessionStorage.setItem('semprePenyaAdminToken', token);
+  sessionStorage.setItem('semprePenyaAdminEmail', email);
+}
+
+function setFormMessage(id, text) {
+  const node = $(id);
+  node.textContent = text || '';
+  node.hidden = !text;
+}
+
+function setAdminView(loggedIn) {
+  $('admin-login-view').hidden = loggedIn;
+  $('admin-publish-view').hidden = !loggedIn;
+  if (loggedIn) $('admin-session-email').textContent = `Administrador: ${adminSession.email}`;
+}
+
+async function verifyAdmin(token) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=user_id&limit=1`, {
+    headers: adminHeaders(token),
+    cache: 'no-store'
+  });
+  if (!response.ok) return false;
+  const rows = await response.json();
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function openAdminModal() {
+  $('admin-modal').hidden = false;
+  document.body.classList.add('modal-open');
+  setFormMessage('admin-login-error', '');
+  setFormMessage('admin-publish-error', '');
+  setFormMessage('admin-publish-ok', '');
+
+  if (adminSession.token) {
+    const valid = await verifyAdmin(adminSession.token).catch(() => false);
+    if (valid) {
+      setAdminView(true);
+      return;
+    }
+    clearAdminSession();
+  }
+  setAdminView(false);
+  if (adminSession.email) $('admin-email').value = adminSession.email;
+}
+
+function closeAdminModal() {
+  $('admin-modal').hidden = true;
+  document.body.classList.remove('modal-open');
+}
+
+async function adminLogin() {
+  const email = $('admin-email').value.trim();
+  const password = $('admin-password').value;
+  const button = $('admin-login');
+  setFormMessage('admin-login-error', '');
+  if (!email || !password) return;
+
+  button.disabled = true;
+  button.textContent = 'Entrant…';
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.access_token) throw new Error(data.error_description || data.msg || data.message || 'No s’ha pogut iniciar sessió');
+    const isAdmin = await verifyAdmin(data.access_token);
+    if (!isAdmin) throw new Error('Aquest compte no té permisos d’administrador.');
+    persistAdminSession(data.access_token, email);
+    $('admin-password').value = '';
+    setAdminView(true);
+  } catch (error) {
+    clearAdminSession();
+    setAdminView(false);
+    setFormMessage('admin-login-error', error.message || 'No s’ha pogut iniciar sessió');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Entrar';
+  }
+}
+
+function selectedRadio(name, fallback) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value || fallback;
+}
+
+function resetAdminPublishForm() {
+  $('admin-url').value = '';
+  $('admin-title-input').value = '';
+  $('admin-source').value = '';
+  $('admin-context').value = '';
+  $('admin-tag').value = '';
+  $('admin-rumor').checked = false;
+  document.querySelector('input[name="admin-section"][value="General"]').checked = true;
+  document.querySelector('input[name="admin-importance"][value="Normal"]').checked = true;
+}
+
+async function adminPublish() {
+  const url = $('admin-url').value.trim();
+  const title = $('admin-title-input').value.trim();
+  const source = $('admin-source').value.trim() || 'Afegit manualment';
+  const context = $('admin-context').value.trim();
+  const tag = $('admin-tag').value.trim();
+  const selectedSection = selectedRadio('admin-section', 'General');
+  const section = selectedSection === 'General' ? 'Altres' : selectedSection;
+  const importance = selectedRadio('admin-importance', 'Normal');
+  const isRumor = $('admin-rumor').checked;
+  const button = $('admin-publish');
+
+  setFormMessage('admin-publish-error', '');
+  setFormMessage('admin-publish-ok', '');
+
+  if (!safeUrl(url) || !title) {
+    setFormMessage('admin-publish-error', 'Cal indicar un enllaç http/https vàlid i un titular.');
+    return;
+  }
+  if (!adminSession.token) {
+    setFormMessage('admin-publish-error', 'La sessió d’administrador ha caducat. Torna a entrar.');
+    setAdminView(false);
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Publicant…';
+  const now = new Date().toISOString();
+  const item = {
+    id: `manual-${Date.now()}`,
+    title,
+    source,
+    source_id: 'manual',
+    context,
+    url,
+    published_at: now,
+    detected_at: now,
+    section,
+    tag,
+    type: 'noticia',
+    importance,
+    is_rumor: isRumor,
+    is_media: selectedSection === 'Media',
+    published: true
+  };
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/news`, {
+      method: 'POST',
+      headers: {
+        ...adminHeaders(adminSession.token),
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify(item)
+    });
+    if (response.status === 401 || response.status === 403) {
+      clearAdminSession();
+      setAdminView(false);
+      throw new Error('La sessió ha caducat o ja no té permisos d’administrador.');
+    }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || data.details || `No s’ha pogut publicar (HTTP ${response.status})`);
+    }
+    resetAdminPublishForm();
+    setFormMessage('admin-publish-ok', 'Publicada. Ja forma part del mateix feed que consulta Android.');
+    await loadFeed();
+  } catch (error) {
+    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut publicar.');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Publicar';
+  }
+}
+
 document.querySelectorAll('[data-section]').forEach((button) => {
   button.addEventListener('click', () => {
     state.section = button.dataset.section;
@@ -349,6 +546,34 @@ document.querySelectorAll('[data-section]').forEach((button) => {
 });
 
 $('refresh').addEventListener('click', loadFeed);
+$('admin-close').addEventListener('click', closeAdminModal);
+$('admin-login').addEventListener('click', adminLogin);
+$('admin-publish').addEventListener('click', adminPublish);
+$('admin-logout').addEventListener('click', () => {
+  clearAdminSession();
+  setAdminView(false);
+});
+$('admin-modal').addEventListener('click', (event) => {
+  if (event.target === $('admin-modal')) closeAdminModal();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !$('admin-modal').hidden) closeAdminModal();
+});
+
+let adminPressTimer = null;
+const adminTrigger = $('admin-trigger');
+const cancelAdminPress = () => {
+  if (adminPressTimer) clearTimeout(adminPressTimer);
+  adminPressTimer = null;
+};
+adminTrigger.addEventListener('pointerdown', () => {
+  cancelAdminPress();
+  adminPressTimer = setTimeout(() => {
+    adminPressTimer = null;
+    openAdminModal();
+  }, 700);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => adminTrigger.addEventListener(eventName, cancelAdminPress));
 
 loadLatest();
 loadFeed();
