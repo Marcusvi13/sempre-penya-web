@@ -237,3 +237,16 @@ body.feature-modal-open { overflow: hidden; }
   .mail-actions { align-items: stretch; flex-direction: column-reverse; }
   .mail-submit, .mail-unsubscribe { width: 100%; }
 }
+
+@media (max-width: 620px) {
+  .header-inner {
+    flex-wrap: wrap;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .brand-row { flex: 1 1 auto; }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
