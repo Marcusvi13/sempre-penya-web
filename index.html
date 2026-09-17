@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#005441">
   <meta name="description" content="SEMPRE PENYA — totes les notícies de la Penya en un únic feed, amb el mateix esperit de l'app Android.">
   <link rel="canonical" href="https://semprepenya.cat/">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
   <title>SEMPRE PENYA · Notícies</title>
 </head>
 <body>
@@ -103,6 +103,7 @@
           <strong id="admin-session-email"></strong>
           <button id="admin-logout" class="text-button" type="button">Surt</button>
         </div>
+        <p id="admin-form-mode" class="admin-help admin-mode-help">Publica una notícia manual al mateix feed que consulta Android.</p>
 
         <label class="field-label" for="admin-url">Enllaç</label>
         <input id="admin-url" class="field-input" type="url" placeholder="https://…">
@@ -138,13 +139,15 @@
         <label class="checkbox-row"><input id="admin-rumor" type="checkbox"> És un rumor</label>
         <p id="admin-publish-error" class="form-error" role="alert" hidden></p>
         <p id="admin-publish-ok" class="form-ok" role="status" hidden></p>
-        <div class="form-actions">
+        <div class="form-actions admin-form-actions">
+          <button id="admin-cancel-edit" class="secondary-action" type="button" hidden>Cancel·la edició</button>
+          <button id="admin-retire" class="danger-action" type="button" hidden>Retira del feed</button>
           <button id="admin-publish" class="primary-action" type="button">Publicar</button>
         </div>
       </div>
     </section>
   </div>
 
-  <script src="app.js?v=5" defer></script>
+  <script src="app.js?v=6" defer></script>
 </body>
 </html>
