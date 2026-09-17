@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=4">
   <link rel="stylesheet" href="styles.css?v=6">
   <link rel="stylesheet" href="visual-v53.css?v=4">
-  <link rel="stylesheet" href="calendar-mail.css?v=2">
+  <link rel="stylesheet" href="calendar-mail.css?v=3">
   <title>SEMPRE PENYA · Notícies</title>
 </head>
 <body>
@@ -22,11 +22,12 @@
         <div class="crest-wrap"><img src="cjb_logo.png?v=3" alt="Escut del Club Joventut Badalona"></div>
         <div class="brand-copy">
           <h1 id="admin-trigger">SEMPRE PENYA</h1>
+          <button id="refresh" class="header-refresh-button" type="button">Actualitza</button>
         </div>
       </div>
-      <div class="header-actions">
-        <button id="refresh" class="header-button secondary" type="button">Actualitza</button>
-        <a id="download" class="header-button" href="https://busuaaaamcojjtavhrne.supabase.co/storage/v1/object/public/app-downloads/sempre-penya-latest.apk">Android</a>
+      <div class="header-actions" aria-label="Eines de Sempre Penya">
+        <button id="calendar-open" class="header-button feature-header-button" type="button">Calendari</button>
+        <button id="mail-open" class="header-button feature-header-button" type="button">✉ Resum per correu</button>
       </div>
     </div>
   </header>
