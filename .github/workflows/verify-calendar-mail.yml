@@ -6,6 +6,7 @@ on:
     paths:
       - 'calendar-mail.js'
       - 'calendar-mail.css'
+      - 'header-layout.css'
       - 'index.html'
       - '.github/workflows/verify-calendar-mail.yml'
   workflow_dispatch:
@@ -21,10 +22,15 @@ jobs:
       - name: Comprova sintaxi JavaScript
         run: node --check calendar-mail.js
 
-      - name: Comprova referències HTML
+      - name: Comprova referències HTML i capçalera
         run: |
           grep -q 'calendar-mail.css?v=' index.html
+          grep -q 'header-layout.css?v=' index.html
           grep -q 'calendar-mail.js?v=' index.html
+          grep -q 'id="refresh" class="header-refresh-button"' index.html
+          grep -q 'id="calendar-open"' index.html
+          grep -q 'id="mail-open"' index.html
+          ! grep -q 'id="download" class="header-button"' index.html
 
       - name: Comprova CORS de subscripció
         env:
