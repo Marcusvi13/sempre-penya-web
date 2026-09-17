@@ -22,30 +22,19 @@ jobs:
       - name: Genera favicon específic
         run: |
           python - <<'PY'
-          from pathlib import Path
-          from PIL import Image, ImageDraw
+          from PIL import Image
 
-          GREEN = '#005441'
           src = Image.open('cjb_logo.png').convert('RGBA')
 
-          # Retalla només marges realment transparents, sense deformar l'escut.
+          # Retalla únicament el marge transparent original.
           alpha = src.getchannel('A')
           bbox = alpha.getbbox()
           if bbox:
               src = src.crop(bbox)
 
-          def make_icon(size, logo_w_ratio=0.56, logo_h_ratio=0.72, ring_ratio=0.035):
+          def make_icon(size, logo_w_ratio=0.40, logo_h_ratio=0.78):
+              # Fons transparent: només l'escut, sense cercle exterior.
               canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-              draw = ImageDraw.Draw(canvas)
-
-              pad = max(1, round(size * 0.07))
-              ring = max(1, round(size * ring_ratio))
-              draw.ellipse(
-                  (pad, pad, size - pad - 1, size - pad - 1),
-                  fill='white',
-                  outline=GREEN,
-                  width=ring,
-              )
 
               max_w = max(1, round(size * logo_w_ratio))
               max_h = max(1, round(size * logo_h_ratio))
@@ -54,17 +43,18 @@ jobs:
               h = max(1, round(src.height * scale))
               logo = src.resize((w, h), Image.Resampling.LANCZOS)
 
+              # Centrat, amb una lleugera compensació vertical perquè visualment
+              # quedi equilibrat dins la pestanya del navegador.
               x = (size - w) // 2
               y = (size - h) // 2
               canvas.alpha_composite(logo, (x, y))
               return canvas
 
-          make_icon(64).save('favicon-64.png', optimize=True)
-          make_icon(32).save('favicon-32.png', optimize=True)
-          make_icon(180, logo_w_ratio=0.58, logo_h_ratio=0.74).save('apple-touch-icon.png', optimize=True)
+          make_icon(64, 0.40, 0.80).save('favicon-64.png', optimize=True)
+          make_icon(32, 0.38, 0.78).save('favicon-32.png', optimize=True)
+          make_icon(180, 0.44, 0.82).save('apple-touch-icon.png', optimize=True)
 
-          print('Font:', Image.open('cjb_logo.png').size)
-          print('Favicon: cercle blanc + anell verd #005441 + escut centrat i reduït')
+          print('Favicon: escut sol, transparent, clarament més estret i amb més aire lateral')
           PY
 
       - name: Conserva els favicons
@@ -75,6 +65,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Sense canvis.'
           else
-            git commit -m 'Genera favicon Penya més compacte'
+            git commit -m 'Genera favicon Penya estret i sense cercle'
             git push
           fi
