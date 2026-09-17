@@ -7,6 +7,12 @@
   background: linear-gradient(45deg, #0B6F59 0%, #005441 52%, #002E24 100%);
 }
 
+/* Nom principal de la capçalera: una mica més gran, mantenint el pes visual de v53. */
+.brand-copy h1 {
+  font-size: 1.16rem;
+  line-height: 1.08;
+}
+
 /* Jerarquia editorial de la capçalera del feed. */
 .feed-heading .eyebrow {
   font-size: 1.05rem;
@@ -162,6 +168,10 @@
 }
 
 @media (max-width: 760px) {
+  .brand-copy h1 {
+    font-size: 1.05rem;
+  }
+
   .filters-toolbar {
     align-items: flex-start;
     gap: 8px;
