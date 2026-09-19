@@ -526,6 +526,33 @@ async function adminLogin() {
   }
 }
 
+function canonicalManualSourceId(source, url) {
+  const key = String(source || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’‘`´]/g, "'")
+    .trim()
+    .toLowerCase();
+  const href = String(url || '').toLowerCase();
+  const isYouTube = href.includes('youtube.com/') || href.includes('youtu.be/');
+
+  if (['acb', 'acb.com', 'liga endesa', 'acb / liga endesa'].includes(key)) return 'acb';
+  if (key.includes("l'esportiu") || key.includes('lesportiu')) return 'lesportiu';
+  if (key.includes('mundo deportivo') || key.includes('mundodeportivo')) return 'mundodeportivo';
+  if (key.includes('gigantes')) return 'gigantes';
+  if (key.includes('sobre la bocina')) return 'sobre-la-bocina';
+  if (key === 'sport' || key.includes('diari sport') || key.includes('diario sport')) return 'sport';
+  if (key.includes('basketball champions league') || key === 'bcl') return 'bcl';
+  if (key.includes('esports bdn')) return 'bdncom-esports';
+  if (key.includes('badalona comunicacio') || key.includes('bdn comunicacio') || key === 'bdncom') {
+    return isYouTube ? 'bdncom-youtube' : 'bdncom';
+  }
+  if (key.includes('club joventut badalona') || key === 'penya' || key.includes('joventut badalona')) {
+    return isYouTube ? 'youtube_penya' : 'penya-oficial';
+  }
+  return null;
+}
+
 function buildAdminPayload() {
   const url = $('admin-url').value.trim();
   const title = $('admin-title-input').value.trim();
@@ -568,6 +595,8 @@ async function adminPublishOrSave() {
   let payload;
   try {
     payload = buildAdminPayload();
+    const canonicalSourceId = canonicalManualSourceId(payload.source, payload.url);
+    if (canonicalSourceId) payload.source_id = canonicalSourceId;
   } catch (error) {
     setFormMessage('admin-publish-error', error.message);
     return;
@@ -590,7 +619,7 @@ async function adminPublishOrSave() {
       body = {
         id: `manual-${Date.now()}`,
         ...payload,
-        source_id: 'manual',
+        source_id: payload.source_id || 'manual',
         published_at: now,
         detected_at: now,
         type: 'noticia',
