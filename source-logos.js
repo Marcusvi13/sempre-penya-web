@@ -12,7 +12,7 @@
     },
     {
       file: 'source_acbcom.png',
-      names: ['acb', 'acb.com', 'liga endesa', 'acb / liga endesa']
+      names: ['acb', 'acb.com', 'acb youtube', 'acb · youtube', 'liga endesa', 'acb / liga endesa']
     },
     {
       file: 'source_basketballcl.png',
