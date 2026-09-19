@@ -22,7 +22,7 @@ button.secondary{background:#e7ece8;color:#182820}button:disabled{opacity:.5;cur
 <p class="note">La decisió s’aplica a aquesta peça. No modifica automàticament els criteris generals del radar.</p>
 </main><script>
 const endpoint="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/radar-discard-review";
-const [id,token]=location.hash.slice(1).split(".");
+const [id,token,directAction]=location.hash.slice(1).split(".");
 const $=id=>document.getElementById(id);
 function date(value){return value?new Date(value).toLocaleString("ca-ES",{timeZone:"Europe/Madrid"}):"Desconeguda"}
 function link(node,url){try{const u=new URL(url);if(!["https:","http:"].includes(u.protocol))throw 0;node.href=u.href;node.hidden=false}catch{node.hidden=true}}
@@ -48,6 +48,12 @@ async function call(action){
  finally{$("publish").disabled=$("discard").disabled=false}
 }
 $("publish").onclick=()=>call("publish");$("discard").onclick=()=>call("discard");
-if(/^[0-9a-f-]{36}$/.test(id||"")&&/^[0-9a-f]{64}$/.test(token||""))call("read");
+if(/^[0-9a-f-]{36}$/.test(id||"")&&/^[0-9a-f]{64}$/.test(token||"")){
+  if(directAction==="publish"||directAction==="discard"){
+    $("title").textContent=directAction==="publish"?"Publicant la notícia…":"Desant la decisió…";
+    $("confirm").checked=true;
+    call(directAction);
+  }else call("read");
+}
 else{$("title").textContent="Obre l’enllaç del correu";$("reason").textContent="Cada avís conté un enllaç privat per revisar aquella notícia."}
 </script></body></html>
