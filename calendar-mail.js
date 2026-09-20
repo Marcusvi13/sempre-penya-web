@@ -3,7 +3,7 @@
   const SUPABASE_URL = 'https://busuaaaamcojjtavhrne.supabase.co';
   const PUBLIC_KEY = 'sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8';
   const SUBSCRIBE_URL = `${SUPABASE_URL}/functions/v1/daily-summary-subscription`;
-  const CALENDAR_URL = `${SUPABASE_URL}/rest/v1/calendar_results?select=game_key,score,played,stats_url`;
+  const CALENDAR_URL = `${SUPABASE_URL}/rest/v1/calendar_results?select=game_key,game_date,date_text,competition,matchup,score,played,stats_url,sort_order,visible&order=sort_order.asc`;
   const EMAIL_KEY = 'sempre_penya_daily_email';
   const ACTIVE_KEY = 'sempre_penya_daily_active';
 
@@ -155,31 +155,41 @@
     list.style.paddingRight = '4px';
     if (message) message.hidden = true;
 
-    let live = new Map();
+    let remoteRows = null;
     try {
-      const response = await fetch(CALENDAR_URL, { headers: { apikey: PUBLIC_KEY, Accept: 'application/json' } });
+      const response = await fetch(CALENDAR_URL, {
+        cache: 'no-store',
+        headers: { apikey: PUBLIC_KEY, Accept: 'application/json' }
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const rows = await response.json();
-      live = new Map(rows.map((row) => [String(row.game_key), row]));
+      if (!Array.isArray(rows) || !rows.length) throw new Error('Calendari remot buit');
+      remoteRows = rows;
     } catch (error) {
-      console.warn('Calendar live results unavailable', error);
+      console.warn('Calendar remote unavailable', error);
       if (message) {
-        message.textContent = 'No s’han pogut carregar els últims marcadors en directe. Mostro el calendari desat.';
+        message.textContent = 'No s’ha pogut carregar el calendari remot. Mostro la còpia de seguretat de l’app.';
         message.dataset.kind = 'warning';
         message.hidden = false;
       }
     }
 
-    const games = seasonGames.map((game) => {
-      const row = live.get(game.key);
-      if (!row) return { ...game };
-      return {
-        ...game,
-        score: String(row.score || '').trim() || game.score,
-        played: Boolean(row.played) || game.played,
-        statsUrl: String(row.stats_url || '').trim() || game.statsUrl
-      };
-    });
+    const games = remoteRows
+      ? remoteRows
+          .filter((row) => row.visible !== false)
+          .map((row) => ({
+            key: String(row.game_key || ''),
+            date: String(row.date_text || row.game_date || ''),
+            competition: String(row.competition || ''),
+            matchup: String(row.matchup || ''),
+            score: String(row.score || '').trim(),
+            played: Boolean(row.played),
+            statsUrl: String(row.stats_url || '').trim(),
+            sortOrder: Number(row.sort_order || 0)
+          }))
+          .filter((game) => game.key && game.date && game.matchup)
+          .sort((a, b) => (a.sortOrder - b.sortOrder) || a.key.localeCompare(b.key))
+      : seasonGames.map((game, index) => ({ ...game, sortOrder: index }));
 
     const today = localDateKey();
     const future = games.filter((game) => !game.played && gameDay(game) >= today);
