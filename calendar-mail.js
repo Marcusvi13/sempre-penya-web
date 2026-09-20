@@ -13,7 +13,6 @@
     ['2026-09-06','06/09/2026 · 13:00','Pretemporada','Asisa Joventut – ratiopharm Ulm','72–66',true,'https://acb.com/docs/descarga/Pretemporada2627/statspenyaratiopham.jpg'],
     ['2026-09-09','09/09/2026 · 18:30','Lliga Catalana ACB · Grup 2','Asisa Joventut – iLERNA Lleida','84–89',true,'https://msstats.optimalwayconsulting.com/v1/fcbq/matches/b2eda818-efcf-4c19-9532-fd3878933fb0/stats/pdf?period=4'],
     ['2026-09-11','11/09/2026 · 18:30','Lliga Catalana ACB · Grup 2','Asisa Joventut – FIATC Girona','95–84',true,'https://msstats.optimalwayconsulting.com/v1/fcbq/matches/85572674-2cf8-466b-94e9-d7274f9e5c05/stats/pdf?period=4'],
-    ['2026-09-13','13/09/2026 · 12:00','Lliga Catalana ACB · Final · si es classifica','Asisa Joventut – Rival pendent','',false,''],
     ['2026-09-19','19/09/2026 · 18:00','Supercopa Endesa · Semifinal','Asisa Joventut – Kosner Baskonia','',false,''],
     ['2026-09-20','20/09/2026 · 19:00','Supercopa Endesa · Final','Asisa Joventut – Barça','',false,''],
     ['2026-09-27','27/09/2026 · 12:00','Liga Endesa · J1','Río Breogán – Asisa Joventut','',false,''],
