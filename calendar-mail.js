@@ -162,18 +162,18 @@
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const rows = await response.json();
-      if (!Array.isArray(rows) || !rows.length) throw new Error('Calendari remot buit');
+      if (!Array.isArray(rows)) throw new Error('Resposta de calendari invàlida');
       remoteRows = rows;
     } catch (error) {
       console.warn('Calendar remote unavailable', error);
       if (message) {
-        message.textContent = 'No s’ha pogut carregar el calendari remot. Mostro la còpia de seguretat de l’app.';
+        message.textContent = 'No s’ha pogut carregar el calendari remot. Mostro la còpia de seguretat del web.';
         message.dataset.kind = 'warning';
         message.hidden = false;
       }
     }
 
-    const games = remoteRows
+    const games = remoteRows !== null
       ? remoteRows
           .filter((row) => row.visible !== false)
           .map((row) => ({
