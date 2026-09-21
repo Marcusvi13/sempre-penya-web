@@ -38,12 +38,33 @@ function render(data){
  $("actions").hidden=data.status!=="pending";
  if(data.needs_confirmation)$("error").textContent="Revisa les coincidències i marca la casella abans de publicar.";
 }
+function finishDirectDiscard(data){
+ if(directAction!=="discard"||data.status!=="kept_discarded")return;
+ $("title").textContent="Descartada ✓";
+ $("meta").textContent="";
+ $("dates").textContent="";
+ $("context").textContent="";
+ $("reason").textContent="La notícia es manté descartada.";
+ $("article").hidden=true;
+ $("matches").hidden=true;
+ $("actions").hidden=true;
+ $("state").textContent="Decisió desada. Aquesta pestanya es tancarà automàticament si el navegador ho permet.";
+ setTimeout(()=>{
+   try{window.close()}catch{}
+   setTimeout(()=>{
+     if(!window.closed && history.length>1){
+       try{history.back()}catch{}
+     }
+   },180);
+ },420);
+}
 async function call(action){
  $("error").textContent="";$("publish").disabled=$("discard").disabled=true;
  try{
  const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,token,action,confirm:$("confirm").checked})});
  const data=await res.json();if(!res.ok)throw new Error(data.error||"No s’ha pogut completar l’acció");
  render(data);
+ finishDirectDiscard(data);
  }catch(e){$("error").textContent=e.message;if(action==="read")$("title").textContent="No s’ha pogut obrir la revisió"}
  finally{$("publish").disabled=$("discard").disabled=false}
 }
