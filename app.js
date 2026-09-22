@@ -1,7 +1,7 @@
 const SUPABASE_URL = 'https://busuaaaamcojjtavhrne.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8';
 const META_URL = `${SUPABASE_URL}/storage/v1/object/public/app-downloads/latest.json`;
-const APK_URL = `${SUPABASE_URL}/storage/v1/object/public/app-downloads/sempre-penya-latest.apk`;
+const APK_URL = `${SUPABASE_URL}/functions/v1/app-download?source=web`;
 const RETENTION_DAYS = 90;
 
 const state = {
@@ -306,9 +306,16 @@ async function loadLatest() {
     if (!response.ok) return;
     const latest = await response.json();
     if (latest.displayVersion && $('version')) $('version').textContent = latest.displayVersion.replace(' - ', ' · ');
-    const url = safeUrl(latest.apkUrl) || APK_URL;
+    const rawUrl = safeUrl(latest.apkUrl) || APK_URL;
+    let url = rawUrl;
+    try {
+      const tracked = new URL(rawUrl);
+      tracked.searchParams.set('source', 'web');
+      url = tracked.toString();
+    } catch (_) {}
     if ($('download')) $('download').href = url;
     if ($('download-side')) $('download-side').href = url;
+    document.querySelectorAll('.toolbar-download-button').forEach(link => { link.href = url; });
   } catch (_) {}
 }
 
