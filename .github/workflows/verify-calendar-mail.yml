@@ -1,11 +1,11 @@
-name: Verifica calendari i correu web
+name: Verifica calendari i estadístiques web
 
 on:
   push:
     branches: [main]
     paths:
-      - 'calendar-mail.js'
-      - 'calendar-mail.css'
+      - 'calendar-stats.js'
+      - 'calendar-stats.css'
       - 'header-layout.css'
       - 'index.html'
       - '.github/workflows/verify-calendar-mail.yml'
@@ -20,35 +20,29 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Comprova sintaxi JavaScript
-        run: node --check calendar-mail.js
+        run: node --check calendar-stats.js
 
       - name: Comprova referències HTML i capçalera
         run: |
-          grep -q 'calendar-mail.css?v=' index.html
+          grep -q 'calendar-stats.css?v=' index.html
           grep -q 'header-layout.css?v=' index.html
-          grep -q 'calendar-mail.js?v=' index.html
+          grep -q 'calendar-stats.js?v=' index.html
           grep -q 'id="refresh" class="header-refresh-button"' index.html
           grep -q 'id="calendar-open"' index.html
-          grep -q 'id="mail-open"' index.html
+          grep -q 'id="stats-open"' index.html
+          grep -q 'Estadístiques Temporada' index.html
+          ! grep -qi 'resum per correu' index.html
+          ! grep -qi 'daily-summary-subscription' calendar-stats.js
+          ! grep -qi 'mail-open' calendar-stats.js
           ! grep -q 'id="download" class="header-button"' index.html
 
-      - name: Comprova CORS de subscripció
+      - name: Comprova API de calendari i estadístiques
         env:
-          ENDPOINT: https://busuaaaamcojjtavhrne.supabase.co/functions/v1/daily-summary-subscription
+          SUPABASE_URL: https://busuaaaamcojjtavhrne.supabase.co
           PUBLIC_KEY: sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8
         run: |
-          code=$(curl -sS -o /tmp/options-body -D /tmp/options-headers -w '%{http_code}' -X OPTIONS "$ENDPOINT" \
-            -H 'Origin: https://semprepenya.cat' \
-            -H 'Access-Control-Request-Method: POST' \
-            -H 'Access-Control-Request-Headers: apikey,content-type')
-          test "$code" = '204'
-          grep -qi '^access-control-allow-origin: https://semprepenya.cat' /tmp/options-headers
+          curl --fail --silent --show-error             -H "apikey: $PUBLIC_KEY"             -H 'Accept: application/json'             "$SUPABASE_URL/rest/v1/calendar_results?select=game_key&limit=1"             -o /tmp/calendar.json
+          jq -e 'type == "array"' /tmp/calendar.json >/dev/null
 
-          code=$(curl -sS -o /tmp/post-body -D /tmp/post-headers -w '%{http_code}' -X POST "$ENDPOINT" \
-            -H 'Origin: https://semprepenya.cat' \
-            -H "apikey: $PUBLIC_KEY" \
-            -H 'Content-Type: application/json' \
-            --data '{"email":"not-an-email","action":"subscribe","source":"web"}')
-          test "$code" = '400'
-          grep -q 'invalid_email' /tmp/post-body
-          grep -qi '^access-control-allow-origin: https://semprepenya.cat' /tmp/post-headers
+          curl --fail --silent --show-error             -H "apikey: $PUBLIC_KEY"             -H 'Accept: application/json'             "$SUPABASE_URL/rest/v1/season_player_game_stats?select=game_key,competition,player_name&limit=2"             -o /tmp/stats.json
+          jq -e 'type == "array"' /tmp/stats.json >/dev/null
