@@ -68,6 +68,12 @@ jobs:
           grep -q 'Estadístiques Temporada' index.html
           ! grep -qi 'resum per correu' index.html
           ! grep -qi 'daily-summary-subscription' calendar-stats.js
+          grep -q 'STATS_CONFIG_URL' calendar-stats.js
+          grep -q 'expanded_button_label' calendar-stats.js
+          grep -q 'id="stats-expanded"' calendar-stats.js
+          grep -q 'id="stats-last-games"' calendar-stats.js
+          grep -q 'data-stats-sort-key' calendar-stats.js
+          grep -q 'statsState.lastGames === count ? null : count' calendar-stats.js
 
       - name: Comprova APIs públiques
         env:
