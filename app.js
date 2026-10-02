@@ -278,6 +278,12 @@ function renderFeed() {
   list.replaceChildren(...items.map(createNewsCard));
   list.setAttribute('aria-busy', state.loading ? 'true' : 'false');
   empty.hidden = state.loading || items.length > 0;
+
+  document.querySelectorAll('[data-section]').forEach((button) => {
+    button.classList.toggle('selected', state.activeSections.has(button.dataset.section));
+  });
+  $('favorites-filter')?.classList.toggle('selected', state.favoritesOnly);
+  renderSourceFilters();
 }
 
 async function loadLatest() {
@@ -309,7 +315,7 @@ async function loadFeed() {
 
   const since = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const params = new URLSearchParams({
-    select: 'id,title,source,source_id,context,url,published_at,detected_at,section,tag,type,importance,is_rumor,is_media',
+    select: 'id,title,source,source_id,context,url,published_at,detected_at,section,tag,type,importance,is_rumor,is_media,media_links,content_group',
     published: 'eq.true',
     detected_at: `gte.${since}`,
     order: 'detected_at.desc',
@@ -326,13 +332,7 @@ async function loadFeed() {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    const seen = new Set();
-    state.items = data.filter((item) => {
-      const key = item.url || item.id;
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    state.items = Array.isArray(data) ? data : [];
     setMessage('');
     $('updated-at').textContent = `Actualitzat ${new Intl.DateTimeFormat('ca-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date())}`;
     renderSourceFilters();
