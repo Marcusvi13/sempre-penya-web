@@ -3,11 +3,14 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8
 const META_URL = `${SUPABASE_URL}/storage/v1/object/public/app-downloads/latest.json`;
 const APK_URL = `${SUPABASE_URL}/functions/v1/app-download?source=web`;
 const RETENTION_DAYS = 90;
+const FEED_TAXONOMY = window.SEMPRE_PENYA_FEED_TAXONOMY;
+if (!FEED_TAXONOMY) throw new Error('No s’ha carregat la taxonomia canònica del feed');
 
 const state = {
   items: [],
-  section: 'Tots',
-  source: null,
+  activeSections: new Set(),
+  favoritesOnly: false,
+  sourceKey: null,
   favorites: loadFavorites(),
   loading: false
 };
@@ -56,7 +59,7 @@ function sourceInitials(item) {
 
 function cardAccent(item) {
   switch (item.section) {
-    case 'Partits': return '#16a34a';
+    case 'Partits': return '#005441';
     case 'Media': return '#0891b2';
     case 'Mercat': return '#f97316';
     case 'Lesions': return '#dc2626';
