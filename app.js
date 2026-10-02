@@ -403,16 +403,44 @@ function setRadio(name, value, fallback) {
   if (target) target.checked = true;
 }
 
+function selectedAdminSection() {
+  const selected = selectedRadio('admin-section', 'General');
+  return selected === 'General' ? 'Altres' : selected;
+}
+
+function renderAdminSubcategories(selected = '') {
+  const fieldset = $('admin-subcategory-fieldset');
+  const host = $('admin-subcategory-options');
+  if (!fieldset || !host) return;
+  const section = selectedAdminSection();
+  const options = FEED_TAXONOMY.subcategories[section] || [];
+  const canonical = canonicalSubcategory(section, selected);
+  fieldset.hidden = options.length === 0;
+  host.replaceChildren();
+  if (!options.length) return;
+  const noneLabel = document.createElement('label');
+  const none = document.createElement('input');
+  none.type = 'radio'; none.name = 'admin-subcategory'; none.value = ''; none.checked = !canonical;
+  noneLabel.append(none, document.createTextNode(' Sense subcategoria'));
+  host.append(noneLabel);
+  options.forEach((option) => {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'radio'; input.name = 'admin-subcategory'; input.value = option; input.checked = option === canonical;
+    label.append(input, document.createTextNode(' ' + option));
+    host.append(label);
+  });
+}
+
 function resetAdminPublishForm() {
   adminEditor.itemId = null;
   $('admin-url').value = '';
   $('admin-title-input').value = '';
   $('admin-source').value = '';
   $('admin-context').value = '';
-  $('admin-tag').value = '';
-  $('admin-rumor').checked = false;
   setRadio('admin-section', 'General', 'General');
   setRadio('admin-importance', 'Normal', 'Normal');
+  renderAdminSubcategories('');
   $('admin-title').textContent = 'Mode administrador';
   $('admin-form-mode').textContent = 'Publica una notícia manual al mateix feed que consulta Android.';
   $('admin-publish').textContent = 'Publicar';
@@ -421,19 +449,15 @@ function resetAdminPublishForm() {
 }
 
 function fillAdminEditForm(item) {
-  if (!item) {
-    resetAdminPublishForm();
-    return;
-  }
+  if (!item) { resetAdminPublishForm(); return; }
   adminEditor.itemId = item.id;
   $('admin-url').value = item.url || '';
   $('admin-title-input').value = item.title || '';
   $('admin-source').value = item.source || '';
   $('admin-context').value = item.context || '';
-  $('admin-tag').value = item.tag || '';
-  $('admin-rumor').checked = Boolean(item.is_rumor);
   setRadio('admin-section', item.section === 'Altres' ? 'General' : item.section, 'General');
   setRadio('admin-importance', item.importance || 'Normal', 'Normal');
+  renderAdminSubcategories(standardSubcategory(item));
   $('admin-title').textContent = 'Edita la notícia';
   $('admin-form-mode').textContent = 'Els canvis s’apliquen a la mateixa fila de Supabase i es reflectiran també a l’app Android.';
   $('admin-publish').textContent = 'Desa els canvis';
@@ -545,26 +569,16 @@ function buildAdminPayload() {
   const title = $('admin-title-input').value.trim();
   const source = $('admin-source').value.trim() || 'Afegit manualment';
   const context = $('admin-context').value.trim();
-  const tag = $('admin-tag').value.trim();
   const selectedSection = selectedRadio('admin-section', 'General');
   const section = selectedSection === 'General' ? 'Altres' : selectedSection;
+  const rawSubcategory = selectedRadio('admin-subcategory', '');
+  const tag = canonicalSubcategory(section, rawSubcategory);
   const importance = selectedRadio('admin-importance', 'Normal');
-  const isRumor = $('admin-rumor').checked;
-
-  if (!safeUrl(url) || !title) {
-    throw new Error('Cal indicar un enllaç http/https vàlid i un titular.');
-  }
-
+  if ((url && !safeUrl(url)) || !title) throw new Error('Cal indicar un titular i, si hi ha enllaç, ha de ser http/https vàlid.');
   return {
-    url,
-    title,
-    source,
-    context,
-    tag,
-    section,
-    importance,
-    is_rumor: isRumor,
-    is_media: selectedSection === 'Media'
+    url, title, source, context, tag, section, importance,
+    is_rumor: section === 'Mercat' && tag === 'Rumor',
+    is_media: section === 'Media'
   };
 }
 
