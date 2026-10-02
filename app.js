@@ -24,6 +24,10 @@ const adminEditor = {
   itemId: null
 };
 
+const rejectEditor = {
+  itemId: null
+};
+
 const $ = (id) => document.getElementById(id);
 
 function loadFavorites() {
@@ -713,46 +717,113 @@ async function adminPublishOrSave() {
   }
 }
 
-async function adminRetire() {
-  const item = pendingAdminItem();
-  if (!item || !adminSession.token) return;
-  if (!window.confirm(`Vols retirar del feed «${item.title}»? La notícia quedarà a Supabase, però Android i web deixaran de mostrar-la.`)) return;
+function openRejectModal(item) {
+  if (!item) return;
+  rejectEditor.itemId = item.id;
+  $('reject-item-title').textContent = item.title || 'Sense titular';
+  $('reject-reason').value = '';
+  $('reject-comment').value = '';
+  $('reject-comment-label').textContent = 'Comentari opcional';
+  $('reject-comment').placeholder = 'Pots afegir context perquè el radar aprengui millor.';
+  setFormMessage('reject-error', '');
+  $('reject-modal').hidden = false;
+}
 
-  const button = $('admin-retire');
-  setFormMessage('admin-publish-error', '');
-  setFormMessage('admin-publish-ok', '');
+function closeRejectModal() {
+  $('reject-modal').hidden = true;
+  rejectEditor.itemId = null;
+}
+
+function updateRejectCommentRequirement() {
+  const custom = $('reject-reason').value === 'other';
+  $('reject-comment-label').textContent = custom ? 'Explica breument el motiu *' : 'Comentari opcional';
+  $('reject-comment').placeholder = custom
+    ? 'Escriu el motiu que no encaixa amb les opcions.'
+    : 'Pots afegir context perquè el radar aprengui millor.';
+}
+
+async function saveRejectReason() {
+  const item = state.items.find((row) => row.id === rejectEditor.itemId);
+  if (!item || !adminSession.token) return;
+
+  const reason = $('reject-reason').value;
+  const comment = $('reject-comment').value.trim();
+  setFormMessage('reject-error', '');
+  if (!reason) {
+    setFormMessage('reject-error', 'Tria un motiu abans de descartar.');
+    return;
+  }
+  if (reason === 'other' && !comment) {
+    setFormMessage('reject-error', 'Escriu breument el motiu.');
+    return;
+  }
+
+  const button = $('reject-save');
   button.disabled = true;
-  button.textContent = 'Retirant…';
+  button.textContent = 'Descartant…';
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?id=eq.${encodeURIComponent(item.id)}`, {
-      method: 'PATCH',
-      headers: {
-        ...adminHeaders(adminSession.token),
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify({ published: false })
-    });
+    const reviewResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/news_reviews?on_conflict=news_id,user_id`,
+      {
+        method: 'POST',
+        headers: {
+          ...adminHeaders(adminSession.token),
+          Prefer: 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          news_id: item.id,
+          verdict: 'rejected',
+          reason,
+          comment: comment || null,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
 
-    if (response.status === 401 || response.status === 403) {
+    if (reviewResponse.status === 401 || reviewResponse.status === 403) {
       clearAdminSession();
       setAdminView(false);
       throw new Error('La sessió ha caducat o ja no té permisos d’administrador.');
     }
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || data.details || `No s’ha pogut retirar (HTTP ${response.status})`);
+    if (!reviewResponse.ok) {
+      const data = await reviewResponse.json().catch(() => ({}));
+      throw new Error(data.message || data.details || `No s’ha pogut desar el motiu (HTTP ${reviewResponse.status})`);
     }
 
+    const newsResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/news?id=eq.${encodeURIComponent(item.id)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          ...adminHeaders(adminSession.token),
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({ published: false })
+      }
+    );
+
+    if (!newsResponse.ok) {
+      const data = await newsResponse.json().catch(() => ({}));
+      throw new Error(data.message || data.details || `No s’ha pogut retirar (HTTP ${newsResponse.status})`);
+    }
+
+    closeRejectModal();
     resetAdminPublishForm();
-    setFormMessage('admin-publish-ok', 'Retirada del feed. Deixarà d’aparèixer tant a la web com a Android en actualitzar.');
+    setFormMessage('admin-publish-ok', 'Descartada del feed amb el motiu desat com a feedback editorial.');
     await loadFeed();
   } catch (error) {
-    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut retirar.');
+    setFormMessage('reject-error', error.message || 'No s’ha pogut descartar.');
   } finally {
     button.disabled = false;
-    button.textContent = 'Retira del feed';
+    button.textContent = 'Descarta';
   }
+}
+
+async function adminRetire() {
+  const item = pendingAdminItem();
+  if (!item || !adminSession.token) return;
+  openRejectModal(item);
 }
 
 document.querySelectorAll('[data-section]').forEach((button) => {
@@ -798,6 +869,13 @@ $('admin-close').addEventListener('click', closeAdminModal);
 $('admin-login').addEventListener('click', adminLogin);
 $('admin-publish').addEventListener('click', adminPublishOrSave);
 $('admin-retire').addEventListener('click', adminRetire);
+$('reject-reason').addEventListener('change', updateRejectCommentRequirement);
+$('reject-save').addEventListener('click', saveRejectReason);
+$('reject-cancel').addEventListener('click', closeRejectModal);
+$('reject-close').addEventListener('click', closeRejectModal);
+$('reject-modal').addEventListener('click', (event) => {
+  if (event.target === $('reject-modal')) closeRejectModal();
+});
 $('admin-cancel-edit').addEventListener('click', () => {
   resetAdminPublishForm();
   setFormMessage('admin-publish-error', '');
@@ -817,6 +895,7 @@ document.addEventListener('keydown', (event) => {
   const toggle = $('source-search-toggle');
   if (menu && toggle) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
   if (!$('admin-modal').hidden) closeAdminModal();
+  if (!$('reject-modal').hidden) closeRejectModal();
 });
 let adminPressTimer = null;
 const adminTrigger = $('admin-trigger');
