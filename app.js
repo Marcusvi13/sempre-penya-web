@@ -171,125 +171,104 @@ function renderSourceFilters() {
   toggle.classList.toggle('active', Boolean(state.sourceKey));
 }
 
-function createNewsCard(item) {
-  const accent = cardAccent(item);
-  const card = document.createElement('article');
-  card.className = 'news-card';
-  card.style.setProperty('--accent', accent);
+function displaySection(section) {
+  return FEED_TAXONOMY.displaySections[section] || section || 'Altres';
+}
 
-  const rail = document.createElement('div');
-  rail.className = 'news-rail';
+function canonicalSubcategory(section, value) {
+  const clean=String(value || '').trim();
+  if(!clean) return '';
+  return (FEED_TAXONOMY.subcategories[section] || []).find((option) => normalizeText(option) === normalizeText(clean)) || '';
+}
 
-  const body = document.createElement('div');
-  body.className = 'news-body';
-
-  const top = document.createElement('div');
-  top.className = 'news-top';
-
-  const sourceBadge = document.createElement('span');
-  sourceBadge.className = 'source-badge';
-  sourceBadge.textContent = sourceInitials(item);
-  sourceBadge.title = item.source || 'Font';
-
-  const topRight = document.createElement('div');
-  topRight.className = 'news-top-right';
-
-  if (item.is_rumor) {
-    const rumor = document.createElement('span');
-    rumor.className = 'rumor-pill';
-    rumor.textContent = 'RUMOR';
-    topRight.append(rumor);
+function standardSubcategory(item) {
+  const explicit=canonicalSubcategory(item.section,item.tag);
+  if(explicit) return explicit;
+  const haystack=normalizeText([item.tag,item.title,item.type].join(' '));
+  const has=(...needles)=>needles.some((needle)=>haystack.includes(normalizeText(needle)));
+  if(item.section==='Partits'){
+    if(has('estadistic','stats','boxscore','box score')) return 'Estadístiques';
+    if(has('post partit','postpartit','roda de premsa','despres del partit')) return 'Post-partit';
+    if(has('previa','pre partit','prepartit')) return 'Prèvia';
+    if(has('cronica','resultat') || normalizeText(item.type)==='resultat') return 'Crònica';
   }
-
-  const icon = document.createElement('span');
-  icon.className = 'type-icon';
-  icon.textContent = typeIcon(item.type);
-  topRight.append(icon);
-
-  top.append(sourceBadge, topRight);
-
-  const href = safeUrl(item.url);
-  const title = href ? document.createElement('a') : document.createElement('div');
-  title.className = 'news-title';
-  title.textContent = item.title || 'Sense titular';
-  if (href) {
-    title.href = href;
-    title.target = '_blank';
-    title.rel = 'noopener noreferrer';
+  if(item.section==='Media'){
+    if(['podcast','audio'].includes(normalizeText(item.type)) || has('podcast','audio','ivoox')) return 'Podcast';
+    if(has('resum del partit','resum partit') || (has('resum') && has('partit','joventut'))) return 'Resum del partit';
+    if(has('highlights','highlight','top 5','top5','millors jugades')) return 'Highlights general';
+    if(has('post partit','postpartit','roda de premsa','despres del partit')) return 'Post-partit';
+    if(normalizeText(item.type)==='video' || has('video','youtube')) return 'Vídeo';
   }
-
-  const source = document.createElement('div');
-  source.className = 'news-source';
-  source.textContent = item.source || 'Font desconeguda';
-
-  body.append(top, title, source);
-
-  if (item.context) {
-    const context = document.createElement('p');
-    context.className = 'news-context';
-    context.textContent = item.context;
-    body.append(context);
+  if(item.section==='Mercat'){
+    if(item.is_rumor || has('rumor')) return 'Rumor';
+    if(has('no segueix','no continu','comiat','adeu','deixa el club','baixa')) return 'No segueix';
+    if(has('fitxatge','fitxa','reforc','incorporacio','arriba')) return 'Fitxatge';
   }
+  return '';
+}
 
-  const bottom = document.createElement('div');
-  bottom.className = 'news-bottom';
+function taxonomyLabel(item) {
+  const category=displaySection(item.section);
+  const sub=standardSubcategory(item);
+  return sub ? category + ' - ' + sub : category;
+}
 
-  const meta = document.createElement('div');
-  meta.className = 'news-meta';
-  if (item.tag) {
-    const tag = document.createElement('span');
-    tag.className = 'news-tag';
-    tag.textContent = item.tag;
-    meta.append(tag);
-  }
-  const date = formatDate(item.published_at || item.detected_at);
-  if (date) {
-    const dateNode = document.createElement('span');
-    dateNode.className = 'news-date';
-    dateNode.textContent = date;
-    meta.append(dateNode);
-  }
-
-  const actions = document.createElement('div');
-  actions.className = 'news-actions';
-
-  if (adminSession.token) {
-    const edit = document.createElement('button');
-    edit.type = 'button';
-    edit.className = 'admin-edit-button';
-    edit.textContent = 'Edita';
-    edit.setAttribute('aria-label', `Edita ${item.title || 'aquesta notícia'}`);
-    edit.addEventListener('click', () => openAdminModal(item.id));
-    actions.append(edit);
-  }
-
-  const favorite = document.createElement('button');
-  favorite.type = 'button';
-  favorite.className = `favorite-button${state.favorites.has(item.id) ? ' active' : ''}`;
-  favorite.setAttribute('aria-label', state.favorites.has(item.id) ? 'Treu dels favorits' : 'Afegeix als favorits');
-  favorite.textContent = state.favorites.has(item.id) ? '★' : '☆';
-  favorite.addEventListener('click', () => {
-    if (state.favorites.has(item.id)) state.favorites.delete(item.id);
-    else state.favorites.add(item.id);
-    saveFavorites();
-    renderFeed();
+function mediaLinks(item) {
+  const links=[];
+  const normalizeKind=(value)=>{ const kind=normalizeText(value); if(['audio','podcast','escoltar'].includes(kind)) return 'audio'; if(['video','youtube'].includes(kind)) return 'video'; if(['read','article','web','llegir'].includes(kind)) return 'read'; return null; };
+  (Array.isArray(item.media_links) ? item.media_links : []).forEach((entry)=>{
+    const kind=normalizeKind(entry && entry.kind);
+    const url=safeUrl((entry && entry.url) || '');
+    if(kind && url) links.push({kind,url});
   });
-  actions.append(favorite);
-
-  if (href) {
-    const read = document.createElement('a');
-    read.className = 'read-button';
-    read.href = href;
-    read.target = '_blank';
-    read.rel = 'noopener noreferrer';
-    read.textContent = 'Llegir →';
-    actions.append(read);
+  const primary=safeUrl(item.url || '');
+  if(primary && !links.some((entry)=>entry.url.replace(/\/+$/,'').toLowerCase()===primary.replace(/\/+$/,'').toLowerCase())){
+    const type=normalizeText(item.type);
+    links.push({kind:['podcast','audio'].includes(type)?'audio':(type==='video'?'video':'read'),url:primary});
   }
+  const order={read:0,audio:1,video:2};
+  const seen=new Set();
+  return links.filter((entry)=>{ const key=entry.url.replace(/\/+$/,'').toLowerCase(); if(seen.has(key)) return false; seen.add(key); return true; }).sort((x,y)=>(order[x.kind]??9)-(order[y.kind]??9));
+}
 
-  bottom.append(meta, actions);
-  body.append(bottom);
-  card.append(rail, body);
-  return card;
+function mediaActionLabel(link) {
+  if(link.kind==='audio') return '🎧 Escoltar →';
+  if(link.kind==='video') return '▶ Veure vídeo →';
+  return 'Llegir →';
+}
+
+function createNewsCard(item) {
+  const accent=cardAccent(item);
+  const card=document.createElement('article'); card.className='news-card'; card.style.setProperty('--accent',accent);
+  const rail=document.createElement('div'); rail.className='news-rail';
+  const body=document.createElement('div'); body.className='news-body';
+  const top=document.createElement('div'); top.className='news-top';
+  const sourceBadge=document.createElement('span'); sourceBadge.className='source-badge'; sourceBadge.textContent=sourceInitials(item); sourceBadge.title=item.source || 'Font';
+  const topRight=document.createElement('div'); topRight.className='news-top-right';
+  if(item.is_rumor){ const rumor=document.createElement('span'); rumor.className='rumor-pill'; rumor.textContent='RUMOR'; topRight.append(rumor); }
+  const icon=document.createElement('span'); icon.className='type-icon'; icon.textContent=typeIcon(item.type); topRight.append(icon);
+  top.append(sourceBadge,topRight);
+  const links=mediaLinks(item);
+  const href=links.length ? links[0].url : null;
+  const title=href ? document.createElement('a') : document.createElement('div');
+  title.className='news-title'; title.textContent=item.title || 'Sense titular';
+  if(href){ title.href=href; title.target='_blank'; title.rel='noopener noreferrer'; }
+  const source=document.createElement('div'); source.className='news-source'; source.textContent=item.source || 'Font desconeguda';
+  body.append(top,title,source);
+  if(item.context){ const context=document.createElement('p'); context.className='news-context'; context.textContent=item.context; body.append(context); }
+  const bottom=document.createElement('div'); bottom.className='news-bottom';
+  const meta=document.createElement('div'); meta.className='news-meta';
+  const tag=document.createElement('span'); tag.className='news-tag'; tag.textContent=taxonomyLabel(item); meta.append(tag);
+  const date=formatDate(item.published_at || item.detected_at);
+  if(date){ const dateNode=document.createElement('span'); dateNode.className='news-date'; dateNode.textContent=date; meta.append(dateNode); }
+  const actions=document.createElement('div'); actions.className='news-actions';
+  if(adminSession.token){ const edit=document.createElement('button'); edit.type='button'; edit.className='admin-edit-button'; edit.textContent='Edita'; edit.addEventListener('click',()=>openAdminModal(item.id)); actions.append(edit); }
+  const favorite=document.createElement('button'); favorite.type='button'; favorite.className='favorite-button' + (state.favorites.has(item.id)?' active':''); favorite.textContent=state.favorites.has(item.id)?'★':'☆';
+  favorite.addEventListener('click',()=>{ if(state.favorites.has(item.id)) state.favorites.delete(item.id); else state.favorites.add(item.id); saveFavorites(); renderFeed(); });
+  actions.append(favorite);
+  bottom.append(meta,actions); body.append(bottom);
+  if(links.length){ const mediaActions=document.createElement('div'); mediaActions.className='news-media-actions'; links.forEach((link)=>{ const action=document.createElement('a'); action.className='read-button'; action.href=link.url; action.target='_blank'; action.rel='noopener noreferrer'; action.textContent=mediaActionLabel(link); mediaActions.append(action); }); body.append(mediaActions); }
+  card.append(rail,body); return card;
 }
 
 function renderFeed() {
