@@ -12,6 +12,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=4">
   <link rel="stylesheet" href="styles.css?v=6">
   <link rel="stylesheet" href="visual-v53.css?v=7">
+  <link rel="stylesheet" href="feed-v58.css?v=1">
   <link rel="stylesheet" href="calendar-stats.css?v=1">
   <link rel="stylesheet" href="header-layout.css?v=1">
   <title>Sempre Penya · Notícies</title>
@@ -44,22 +45,21 @@
       </div>
 
       <div class="filters-toolbar">
-        <nav class="filter-scroll category-filters" aria-label="Filtra per categoria">
-          <button class="filter-chip selected" data-section="Tots" type="button">Tots</button>
+        <nav class="category-filters" aria-label="Filtra el feed">
+          <div class="source-search-wrap">
+            <button id="source-search-toggle" class="filter-chip source-search-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
+              Fonts
+            </button>
+            <div id="source-search-menu" class="source-search-menu" role="listbox" aria-label="Filtra per font" hidden></div>
+          </div>
           <button class="filter-chip" data-section="Partits" type="button">Partits</button>
-          <button class="filter-chip" data-section="Media" type="button">Media</button>
+          <button class="filter-chip" data-section="Media" type="button">Mèdia</button>
           <button class="filter-chip" data-section="Mercat" type="button">Mercat</button>
           <button class="filter-chip" data-section="Lesions" type="button">Lesions</button>
-          <button class="filter-chip favorite-chip" data-section="Favorits" type="button">★ Favorits</button>
+          <button class="filter-chip favorite-chip" id="favorites-filter" type="button">Preferits</button>
         </nav>
 
         <div class="source-tools-row">
-          <div class="source-search-wrap">
-            <button id="source-search-toggle" class="source-search-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
-              Cercador per Fonts
-            </button>
-            <div id="source-search-menu" class="source-search-menu" role="listbox" aria-label="Cercador per fonts" hidden></div>
-          </div>
           <a class="toolbar-download-button" href="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/app-download?source=web" aria-label="Actualitza Sempre Penya a la darrera versió">
             Actualitza l'app
           </a>
@@ -134,8 +134,10 @@
         <input id="admin-source" class="field-input" type="text">
         <label class="field-label" for="admin-context">Context breu</label>
         <textarea id="admin-context" class="field-input" rows="3"></textarea>
-        <label class="field-label" for="admin-tag">Etiqueta (opcional)</label>
-        <input id="admin-tag" class="field-input" type="text">
+        <fieldset class="choice-group" id="admin-subcategory-fieldset" hidden>
+          <legend>Subcategoria</legend>
+          <div class="choice-row" id="admin-subcategory-options"></div>
+        </fieldset>
 
         <fieldset class="choice-group">
           <legend>Categoria</legend>
@@ -157,7 +159,6 @@
           <p class="choice-note">«Important» queda marcada igual que a l’app i pot ser utilitzada pel sistema de notificacions Android.</p>
         </fieldset>
 
-        <label class="checkbox-row"><input id="admin-rumor" type="checkbox"> És un rumor</label>
         <p id="admin-publish-error" class="form-error" role="alert" hidden></p>
         <p id="admin-publish-ok" class="form-ok" role="status" hidden></p>
         <div class="form-actions admin-form-actions">
@@ -169,10 +170,10 @@
     </section>
   </div>
 
-  <script src="app.js?v=7" defer></script>
+  <script src="feed-taxonomy.js?v=1" defer></script>
+  <script src="app.js?v=8" defer></script>
   <script src="order-fix.js?v=1" defer></script>
   <script src="source-logos.js?v=1" defer></script>
-  <script src="source-search.js?v=1" defer></script>
   <script src="calendar-stats.js?v=1" defer></script>
 </body>
 </html>
