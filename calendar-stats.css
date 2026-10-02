@@ -265,3 +265,65 @@ body.feature-modal-open { overflow: hidden; }
     justify-content: flex-end;
   }
 }
+
+
+/* v59 — paritat amb l'app + ordenació per columna */
+.stats-scope-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+.stats-expand-toggle {
+  flex: 1 1 180px;
+  min-height: 34px;
+  border: 1px solid #0B6F59;
+  border-radius: 9px;
+  padding: 0 10px;
+  background: #fff;
+  color: #0B6F59;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.stats-expand-toggle.selected {
+  background: #005441;
+  color: #fff;
+}
+.stats-scope-row .stats-last-games {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.stats-sort-button {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.stats-sort-button:focus-visible,
+.stats-expand-toggle:focus-visible,
+.stats-chip-row button:focus-visible {
+  outline: 2px solid #0B6F59;
+  outline-offset: 2px;
+}
+.stats-table th[aria-sort="ascending"],
+.stats-table th[aria-sort="descending"] {
+  background: #dcefe8;
+}
+.stats-valuation { font-weight: 850; }
+
+@media (max-width: 620px) {
+  .stats-scope-row {
+    align-items: stretch;
+  }
+  .stats-expand-toggle {
+    flex-basis: 150px;
+    padding: 0 7px;
+    font-size: .72rem;
+  }
+}
