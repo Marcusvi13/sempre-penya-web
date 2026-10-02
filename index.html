@@ -67,7 +67,7 @@
       </div>
 
       <div class="retention-row">
-        <span>Es mostren els darrers 90 dies · ★ Els favorits es guarden en aquest navegador</span>
+        <span>Es mostren els darrers 90 dies · ★ Els preferits es guarden en aquest navegador</span>
       </div>
 
       <div id="source-filters" class="filter-scroll source-filters" aria-label="Filtra per font" hidden></div>
@@ -134,11 +134,6 @@
         <input id="admin-source" class="field-input" type="text">
         <label class="field-label" for="admin-context">Context breu</label>
         <textarea id="admin-context" class="field-input" rows="3"></textarea>
-        <fieldset class="choice-group" id="admin-subcategory-fieldset" hidden>
-          <legend>Subcategoria</legend>
-          <div class="choice-row" id="admin-subcategory-options"></div>
-        </fieldset>
-
         <fieldset class="choice-group">
           <legend>Categoria</legend>
           <div class="choice-row">
@@ -148,6 +143,11 @@
             <label><input type="radio" name="admin-section" value="Mercat"> Mercat</label>
             <label><input type="radio" name="admin-section" value="Lesions"> Lesions</label>
           </div>
+        </fieldset>
+
+        <fieldset class="choice-group" id="admin-subcategory-fieldset" hidden>
+          <legend>Subcategoria</legend>
+          <div class="choice-row" id="admin-subcategory-options"></div>
         </fieldset>
 
         <fieldset class="choice-group">
