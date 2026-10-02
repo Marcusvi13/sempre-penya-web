@@ -280,437 +280,36 @@ function renderFeed() {
   empty.hidden = state.loading || items.length > 0;
 
   document.querySelectorAll('[data-section]').forEach((button) => {
-    button.classList.toggle('selected', state.activeSections.has(button.dataset.section));
-  });
-  $('favorites-filter')?.classList.toggle('selected', state.favoritesOnly);
-  renderSourceFilters();
-}
-
-async function loadLatest() {
-  try {
-    const response = await fetch(`${META_URL}?t=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) return;
-    const latest = await response.json();
-    if (latest.displayVersion && $('version')) $('version').textContent = latest.displayVersion.replace(' - ', ' · ');
-    const rawUrl = safeUrl(latest.apkUrl) || APK_URL;
-    let url = rawUrl;
-    try {
-      const tracked = new URL(rawUrl);
-      tracked.searchParams.set('source', 'web');
-      url = tracked.toString();
-    } catch (_) {}
-    if ($('download')) $('download').href = url;
-    if ($('download-side')) $('download-side').href = url;
-    document.querySelectorAll('.toolbar-download-button').forEach(link => { link.href = url; });
-  } catch (_) {}
-}
-
-async function loadFeed() {
-  if (state.loading) return;
-  state.loading = true;
-  updateHeaderCount();
-  $('refresh').disabled = true;
-  $('news-list').setAttribute('aria-busy', 'true');
-  setMessage('Actualitzant les notícies…');
-
-  const since = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const params = new URLSearchParams({
-    select: 'id,title,source,source_id,context,url,published_at,detected_at,section,tag,type,importance,is_rumor,is_media,media_links,content_group',
-    published: 'eq.true',
-    detected_at: `gte.${since}`,
-    order: 'detected_at.desc',
-    limit: '1000'
-  });
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?${params.toString()}`, {
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Accept: 'application/json'
-      },
-      cache: 'no-store'
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    state.items = Array.isArray(data) ? data : [];
-    setMessage('');
-    $('updated-at').textContent = `Actualitzat ${new Intl.DateTimeFormat('ca-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date())}`;
-    renderSourceFilters();
-  } catch (_) {
-    setMessage("No s'ha pogut carregar el feed ara mateix. Torna-ho a provar amb «Actualitza».", 'error');
-  } finally {
-    state.loading = false;
-    $('refresh').disabled = false;
-    updateHeaderCount();
-    renderFeed();
-  }
-}
-
-function adminHeaders(token = '') {
-  const headers = {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    Accept: 'application/json',
-    'Content-Type': 'application/json'
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
-function clearAdminSession() {
-  adminSession.token = '';
-  adminSession.email = '';
-  sessionStorage.removeItem('semprePenyaAdminToken');
-  sessionStorage.removeItem('semprePenyaAdminEmail');
-  renderFeed();
-}
-
-function persistAdminSession(token, email) {
-  adminSession.token = token;
-  adminSession.email = email;
-  sessionStorage.setItem('semprePenyaAdminToken', token);
-  sessionStorage.setItem('semprePenyaAdminEmail', email);
-}
-
-function setFormMessage(id, text) {
-  const node = $(id);
-  node.textContent = text || '';
-  node.hidden = !text;
-}
-
-function setAdminView(loggedIn) {
-  $('admin-login-view').hidden = loggedIn;
-  $('admin-publish-view').hidden = !loggedIn;
-  if (loggedIn) $('admin-session-email').textContent = `Administrador: ${adminSession.email}`;
-}
-
-async function verifyAdmin(token) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=user_id&limit=1`, {
-    headers: adminHeaders(token),
-    cache: 'no-store'
-  });
-  if (!response.ok) return false;
-  const rows = await response.json();
-  return Array.isArray(rows) && rows.length > 0;
-}
-
-function selectedRadio(name, fallback) {
-  return document.querySelector(`input[name="${name}"]:checked`)?.value || fallback;
-}
-
-function setRadio(name, value, fallback) {
-  const target = document.querySelector(`input[name="${name}"][value="${value}"]`)
-    || document.querySelector(`input[name="${name}"][value="${fallback}"]`);
-  if (target) target.checked = true;
-}
-
-function selectedAdminSection() {
-  const selected = selectedRadio('admin-section', 'General');
-  return selected === 'General' ? 'Altres' : selected;
-}
-
-function renderAdminSubcategories(selected = '') {
-  const fieldset = $('admin-subcategory-fieldset');
-  const host = $('admin-subcategory-options');
-  if (!fieldset || !host) return;
-  const section = selectedAdminSection();
-  const options = FEED_TAXONOMY.subcategories[section] || [];
-  const canonical = canonicalSubcategory(section, selected);
-  fieldset.hidden = options.length === 0;
-  host.replaceChildren();
-  if (!options.length) return;
-  const noneLabel = document.createElement('label');
-  const none = document.createElement('input');
-  none.type = 'radio'; none.name = 'admin-subcategory'; none.value = ''; none.checked = !canonical;
-  noneLabel.append(none, document.createTextNode(' Sense subcategoria'));
-  host.append(noneLabel);
-  options.forEach((option) => {
-    const label = document.createElement('label');
-    const input = document.createElement('input');
-    input.type = 'radio'; input.name = 'admin-subcategory'; input.value = option; input.checked = option === canonical;
-    label.append(input, document.createTextNode(' ' + option));
-    host.append(label);
-  });
-}
-
-function resetAdminPublishForm() {
-  adminEditor.itemId = null;
-  $('admin-url').value = '';
-  $('admin-title-input').value = '';
-  $('admin-source').value = '';
-  $('admin-context').value = '';
-  setRadio('admin-section', 'General', 'General');
-  setRadio('admin-importance', 'Normal', 'Normal');
-  renderAdminSubcategories('');
-  $('admin-title').textContent = 'Mode administrador';
-  $('admin-form-mode').textContent = 'Publica una notícia manual al mateix feed que consulta Android.';
-  $('admin-publish').textContent = 'Publicar';
-  $('admin-retire').hidden = true;
-  $('admin-cancel-edit').hidden = true;
-}
-
-function fillAdminEditForm(item) {
-  if (!item) { resetAdminPublishForm(); return; }
-  adminEditor.itemId = item.id;
-  $('admin-url').value = item.url || '';
-  $('admin-title-input').value = item.title || '';
-  $('admin-source').value = item.source || '';
-  $('admin-context').value = item.context || '';
-  setRadio('admin-section', item.section === 'Altres' ? 'General' : item.section, 'General');
-  setRadio('admin-importance', item.importance || 'Normal', 'Normal');
-  renderAdminSubcategories(standardSubcategory(item));
-  $('admin-title').textContent = 'Edita la notícia';
-  $('admin-form-mode').textContent = 'Els canvis s’apliquen a la mateixa fila de Supabase i es reflectiran també a l’app Android.';
-  $('admin-publish').textContent = 'Desa els canvis';
-  $('admin-retire').hidden = false;
-  $('admin-cancel-edit').hidden = false;
-}
-
-function pendingAdminItem() {
-  if (!adminEditor.itemId) return null;
-  return state.items.find((item) => item.id === adminEditor.itemId) || null;
-}
-
-async function openAdminModal(itemId = null) {
-  adminEditor.itemId = itemId || null;
-  $('admin-modal').hidden = false;
-  document.body.classList.add('modal-open');
-  setFormMessage('admin-login-error', '');
-  setFormMessage('admin-publish-error', '');
-  setFormMessage('admin-publish-ok', '');
-
-  if (adminSession.token) {
-    const valid = await verifyAdmin(adminSession.token).catch(() => false);
-    if (valid) {
-      setAdminView(true);
-      const item = pendingAdminItem();
-      if (item) fillAdminEditForm(item);
-      else resetAdminPublishForm();
-      renderFeed();
-      return;
-    }
-    clearAdminSession();
-  }
-
-  setAdminView(false);
-  if (adminSession.email) $('admin-email').value = adminSession.email;
-}
-
-function closeAdminModal() {
-  $('admin-modal').hidden = true;
-  document.body.classList.remove('modal-open');
-  adminEditor.itemId = null;
-}
-
-async function adminLogin() {
-  const email = $('admin-email').value.trim();
-  const password = $('admin-password').value;
-  const button = $('admin-login');
-  setFormMessage('admin-login-error', '');
-  if (!email || !password) return;
-
-  button.disabled = true;
-  button.textContent = 'Entrant…';
-  try {
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: adminHeaders(),
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.access_token) throw new Error(data.error_description || data.msg || data.message || 'No s’ha pogut iniciar sessió');
-    const isAdmin = await verifyAdmin(data.access_token);
-    if (!isAdmin) throw new Error('Aquest compte no té permisos d’administrador.');
-    persistAdminSession(data.access_token, email);
-    $('admin-password').value = '';
-    setAdminView(true);
-    const item = pendingAdminItem();
-    if (item) fillAdminEditForm(item);
-    else resetAdminPublishForm();
-    renderFeed();
-  } catch (error) {
-    clearAdminSession();
-    setAdminView(false);
-    setFormMessage('admin-login-error', error.message || 'No s’ha pogut iniciar sessió');
-  } finally {
-    button.disabled = false;
-    button.textContent = 'Entrar';
-  }
-}
-
-function canonicalManualSourceId(source, url) {
-  const key = String(source || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[’‘`´]/g, "'")
-    .trim()
-    .toLowerCase();
-  const href = String(url || '').toLowerCase();
-  const isYouTube = href.includes('youtube.com/') || href.includes('youtu.be/');
-
-  if (['acb', 'acb.com', 'liga endesa', 'acb / liga endesa'].includes(key)) return 'acb';
-  if (key.includes("l'esportiu") || key.includes('lesportiu')) return 'lesportiu';
-  if (key.includes('mundo deportivo') || key.includes('mundodeportivo')) return 'mundodeportivo';
-  if (key.includes('gigantes')) return 'gigantes';
-  if (key.includes('sobre la bocina')) return 'sobre-la-bocina';
-  if (key === 'sport' || key.includes('diari sport') || key.includes('diario sport')) return 'sport';
-  if (key.includes('basketball champions league') || key === 'bcl') return 'bcl';
-  if (key.includes('esports bdn')) return 'bdncom-esports';
-  if (key.includes('badalona comunicacio') || key.includes('bdn comunicacio') || key === 'bdncom') {
-    return isYouTube ? 'bdncom-youtube' : 'bdncom';
-  }
-  if (key.includes('club joventut badalona') || key === 'penya' || key.includes('joventut badalona')) {
-    return isYouTube ? 'youtube_penya' : 'penya-oficial';
-  }
-  return null;
-}
-
-function buildAdminPayload() {
-  const url = $('admin-url').value.trim();
-  const title = $('admin-title-input').value.trim();
-  const source = $('admin-source').value.trim() || 'Afegit manualment';
-  const context = $('admin-context').value.trim();
-  const selectedSection = selectedRadio('admin-section', 'General');
-  const section = selectedSection === 'General' ? 'Altres' : selectedSection;
-  const rawSubcategory = selectedRadio('admin-subcategory', '');
-  const tag = canonicalSubcategory(section, rawSubcategory);
-  const importance = selectedRadio('admin-importance', 'Normal');
-  if ((url && !safeUrl(url)) || !title) throw new Error('Cal indicar un titular i, si hi ha enllaç, ha de ser http/https vàlid.');
-  return {
-    url, title, source, context, tag, section, importance,
-    is_rumor: section === 'Mercat' && tag === 'Rumor',
-    is_media: section === 'Media'
-  };
-}
-
-async function adminPublishOrSave() {
-  const button = $('admin-publish');
-  setFormMessage('admin-publish-error', '');
-  setFormMessage('admin-publish-ok', '');
-
-  if (!adminSession.token) {
-    setFormMessage('admin-publish-error', 'La sessió d’administrador ha caducat. Torna a entrar.');
-    setAdminView(false);
-    return;
-  }
-
-  let payload;
-  try {
-    payload = buildAdminPayload();
-    const canonicalSourceId = canonicalManualSourceId(payload.source, payload.url);
-    if (canonicalSourceId) payload.source_id = canonicalSourceId;
-  } catch (error) {
-    setFormMessage('admin-publish-error', error.message);
-    return;
-  }
-
-  const editing = Boolean(adminEditor.itemId);
-  button.disabled = true;
-  button.textContent = editing ? 'Desant…' : 'Publicant…';
-
-  try {
-    let endpoint = `${SUPABASE_URL}/rest/v1/news`;
-    let method = 'POST';
-    let body = payload;
-
-    if (editing) {
-      endpoint += `?id=eq.${encodeURIComponent(adminEditor.itemId)}`;
-      method = 'PATCH';
-    } else {
-      const now = new Date().toISOString();
-      body = {
-        id: `manual-${Date.now()}`,
-        ...payload,
-        source_id: payload.source_id || 'manual',
-        published_at: now,
-        detected_at: now,
-        type: 'noticia',
-        published: true
-      };
-    }
-
-    const response = await fetch(endpoint, {
-      method,
-      headers: {
-        ...adminHeaders(adminSession.token),
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      clearAdminSession();
-      setAdminView(false);
-      throw new Error('La sessió ha caducat o ja no té permisos d’administrador.');
-    }
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || data.details || `No s’ha pogut desar (HTTP ${response.status})`);
-    }
-
-    const message = editing
-      ? 'Canvis desats. Android i web llegiran aquesta mateixa versió.'
-      : 'Publicada. Ja forma part del mateix feed que consulta Android.';
-    resetAdminPublishForm();
-    setFormMessage('admin-publish-ok', message);
-    await loadFeed();
-  } catch (error) {
-    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut desar.');
-  } finally {
-    button.disabled = false;
-    button.textContent = adminEditor.itemId ? 'Desa els canvis' : 'Publicar';
-  }
-}
-
-async function adminRetire() {
-  const item = pendingAdminItem();
-  if (!item || !adminSession.token) return;
-  if (!window.confirm(`Vols retirar del feed «${item.title}»? La notícia quedarà a Supabase, però Android i web deixaran de mostrar-la.`)) return;
-
-  const button = $('admin-retire');
-  setFormMessage('admin-publish-error', '');
-  setFormMessage('admin-publish-ok', '');
-  button.disabled = true;
-  button.textContent = 'Retirant…';
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?id=eq.${encodeURIComponent(item.id)}`, {
-      method: 'PATCH',
-      headers: {
-        ...adminHeaders(adminSession.token),
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify({ published: false })
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      clearAdminSession();
-      setAdminView(false);
-      throw new Error('La sessió ha caducat o ja no té permisos d’administrador.');
-    }
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || data.details || `No s’ha pogut retirar (HTTP ${response.status})`);
-    }
-
-    resetAdminPublishForm();
-    setFormMessage('admin-publish-ok', 'Retirada del feed. Deixarà d’aparèixer tant a la web com a Android en actualitzar.');
-    await loadFeed();
-  } catch (error) {
-    setFormMessage('admin-publish-error', error.message || 'No s’ha pogut retirar.');
-  } finally {
-    button.disabled = false;
-    button.textContent = 'Retira del feed';
-  }
-}
-
-document.querySelectorAll('[data-section]').forEach((button) => {
   button.addEventListener('click', () => {
-    state.section = button.dataset.section;
-    document.querySelectorAll('[data-section]').forEach((node) => node.classList.toggle('selected', node === button));
+    const section = button.dataset.section;
+    if (state.activeSections.has(section)) state.activeSections.delete(section);
+    else state.activeSections.add(section);
     renderFeed();
+    const menu = $('source-search-menu'); if (menu) menu.hidden = true;
   });
 });
 
+$('favorites-filter')?.addEventListener('click', () => {
+  state.favoritesOnly = !state.favoritesOnly;
+  renderFeed();
+});
+
+$('source-search-toggle')?.addEventListener('click', (event) => {
+  event.stopPropagation();
+  const menu = $('source-search-menu');
+  const toggle = $('source-search-toggle');
+  if (!menu || !toggle) return;
+  const opening = menu.hidden;
+  menu.hidden = !opening;
+  toggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  if (opening) renderSourceFilters();
+});
+$('source-search-menu')?.addEventListener('click', (event) => event.stopPropagation());
+document.addEventListener('click', () => { const menu=$('source-search-menu'); const toggle=$('source-search-toggle'); if(menu&&toggle){ menu.hidden=true; toggle.setAttribute('aria-expanded','false'); } });
+
+document.querySelectorAll('input[name="admin-section"]').forEach((input) => {
+  input.addEventListener('change', () => renderAdminSubcategories(''));
+});
 $('refresh').addEventListener('click', loadFeed);
 $('admin-close').addEventListener('click', closeAdminModal);
 $('admin-login').addEventListener('click', adminLogin);
@@ -730,7 +329,11 @@ $('admin-modal').addEventListener('click', (event) => {
   if (event.target === $('admin-modal')) closeAdminModal();
 });
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !$('admin-modal').hidden) closeAdminModal();
+  if (event.key !== 'Escape') return;
+  const menu = $('source-search-menu');
+  const toggle = $('source-search-toggle');
+  if (menu && toggle) { menu.hidden = true; toggle.setAttribute('aria-expanded','false'); }
+  if (!$('admin-modal').hidden) closeAdminModal();
 });
 
 let adminPressTimer = null;
