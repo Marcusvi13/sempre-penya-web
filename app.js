@@ -237,6 +237,58 @@ function mediaActionLabel(link) {
   return 'Llegir →';
 }
 
+function groupingKey(item) {
+  const explicit = normalizeText(item.content_group);
+  if (explicit) return 'group:' + explicit;
+  const title = normalizeText(item.title);
+  const day = String(item.published_at || '').slice(0, 10) || String(item.detected_at || '').slice(0, 10);
+  if (title.length >= 18 && day.length === 10) return 'title:' + day + ':' + title;
+  const links = mediaLinks(item);
+  if (links.length) return 'url:' + links[0].url.replace(/\/+$/, '').toLowerCase();
+  return 'id:' + item.id;
+}
+
+function mergeMultimedia(items) {
+  const sorted = [...items].sort((a, b) =>
+    String(b.detected_at || b.published_at || '').localeCompare(String(a.detected_at || a.published_at || ''))
+  );
+  const merged = new Map();
+
+  sorted.forEach((item) => {
+    const key = groupingKey(item);
+    const normalized = { ...item, media_links: mediaLinks(item) };
+    const previous = merged.get(key);
+    if (!previous) {
+      merged.set(key, normalized);
+      return;
+    }
+
+    const links = mediaLinks({
+      ...previous,
+      url: '',
+      media_links: [...mediaLinks(previous), ...mediaLinks(normalized)]
+    });
+    merged.set(key, {
+      ...previous,
+      url: links[0]?.url || previous.url,
+      media_links: links,
+      context: String(previous.context || '').length >= String(normalized.context || '').length
+        ? previous.context
+        : normalized.context,
+      importance: previous.importance === 'Important' || normalized.importance === 'Important'
+        ? 'Important'
+        : previous.importance,
+      is_rumor: Boolean(previous.is_rumor || normalized.is_rumor),
+      is_media: Boolean(previous.is_media || normalized.is_media),
+      content_group: previous.content_group || normalized.content_group || ''
+    });
+  });
+
+  return [...merged.values()].sort((a, b) =>
+    String(b.detected_at || b.published_at || '').localeCompare(String(a.detected_at || a.published_at || ''))
+  );
+}
+
 function createNewsCard(item) {
   const accent=cardAccent(item);
   const card=document.createElement('article'); card.className='news-card'; card.style.setProperty('--accent',accent);
@@ -332,7 +384,7 @@ async function loadFeed() {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    state.items = Array.isArray(data) ? data : [];
+    state.items = mergeMultimedia(Array.isArray(data) ? data : []);
     setMessage('');
     $('updated-at').textContent = `Actualitzat ${new Intl.DateTimeFormat('ca-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date())}`;
     renderSourceFilters();
