@@ -94,18 +94,21 @@ function formatDate(value) {
   }).format(date);
 }
 
+function normalizeText(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function normalizedMedia(item) {
-  return Boolean(item.is_media) || item.section === 'Media' || ['video', 'podcast', 'audio', 'foto'].includes((item.type || '').toLowerCase());
+  return Boolean(item.is_media) || item.section === 'Media' || ['video','podcast','audio','foto'].includes(normalizeText(item.type));
 }
 
 function visibleItems() {
   return state.items.filter((item) => {
-    let sectionOk = true;
-    if (state.section === 'Favorits') sectionOk = state.favorites.has(item.id);
-    else if (state.section === 'Media') sectionOk = normalizedMedia(item);
-    else if (state.section !== 'Tots') sectionOk = item.section === state.section;
-    const sourceOk = !state.source || item.source_id === state.source;
-    return sectionOk && sourceOk;
+    const sectionOk = state.activeSections.size === 0 || [...state.activeSections].some((selected) => selected === 'Media' ? normalizedMedia(item) : item.section === selected);
+    const favoriteOk = !state.favoritesOnly || state.favorites.has(item.id);
+    const itemSourceKey = String(item.source_id || '').trim() || ('name:' + normalizeText(item.source));
+    const sourceOk = !state.sourceKey || itemSourceKey === state.sourceKey;
+    return sectionOk && favoriteOk && sourceOk;
   });
 }
 
@@ -131,46 +134,41 @@ function updateHeaderCount() {
 }
 
 function renderSourceFilters() {
-  const host = $('source-filters');
-  const sources = new Map();
+  const menu = $('source-search-menu');
+  const toggle = $('source-search-toggle');
+  if (!menu || !toggle) return;
+  const grouped = new Map();
   state.items.forEach((item) => {
-    if (item.source_id) sources.set(item.source_id, item.source || item.source_id);
+    const key = String(item.source_id || '').trim() || ('name:' + normalizeText(item.source));
+    const current = grouped.get(key) || { key, name: String(item.source || '').trim() || 'Font desconeguda', count: 0 };
+    current.count += 1;
+    grouped.set(key, current);
   });
-
-  if (sources.size < 2) {
-    host.hidden = true;
-    host.replaceChildren();
-    return;
-  }
-
-  const all = document.createElement('button');
-  all.type = 'button';
-  all.className = `source-chip${state.source === null ? ' selected' : ''}`;
-  all.textContent = 'Totes les fonts';
-  all.addEventListener('click', () => {
-    state.source = null;
-    renderSourceFilters();
-    renderFeed();
-  });
-
-  const nodes = [all];
-  [...sources.entries()]
-    .sort((a, b) => a[1].localeCompare(b[1], 'ca'))
-    .forEach(([id, name]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `source-chip${state.source === id ? ' selected' : ''}`;
-      button.textContent = name;
-      button.addEventListener('click', () => {
-        state.source = state.source === id ? null : id;
-        renderSourceFilters();
-        renderFeed();
-      });
-      nodes.push(button);
-    });
-
-  host.replaceChildren(...nodes);
-  host.hidden = false;
+  const options = [...grouped.values()].sort((a,b) => b.count - a.count || a.name.localeCompare(b.name,'ca'));
+  if (state.sourceKey && !options.some((entry) => entry.key === state.sourceKey)) state.sourceKey = null;
+  const nodes = [];
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'source-menu-reset' + (state.sourceKey ? '' : ' selected');
+  reset.textContent = 'Totes les fonts';
+  reset.addEventListener('click', () => { state.sourceKey = null; renderSourceFilters(); renderFeed(); menu.hidden = true; toggle.setAttribute('aria-expanded','false'); });
+  nodes.push(reset);
+  const top = options.slice(0,10);
+  const rest = options.slice(10).sort((a,b) => a.name.localeCompare(b.name,'ca'));
+  if (top.length) { const label=document.createElement('div'); label.className='source-menu-label'; label.textContent='10 fonts amb més notícies'; nodes.push(label); }
+  const add = (entry) => {
+    const button=document.createElement('button'); button.type='button'; button.className='source-menu-item' + (state.sourceKey===entry.key ? ' selected' : '');
+    const name=document.createElement('span'); name.className='source-menu-name'; name.textContent=entry.name;
+    const count=document.createElement('span'); count.className='source-menu-count'; count.textContent=entry.count;
+    button.append(name,count);
+    button.addEventListener('click', () => { state.sourceKey = state.sourceKey===entry.key ? null : entry.key; renderSourceFilters(); renderFeed(); menu.hidden=true; toggle.setAttribute('aria-expanded','false'); });
+    nodes.push(button);
+  };
+  top.forEach(add);
+  if(rest.length){ const sep=document.createElement('div'); sep.className='source-menu-separator'; nodes.push(sep); rest.forEach(add); }
+  menu.replaceChildren(...nodes);
+  toggle.classList.toggle('selected', Boolean(state.sourceKey));
+  toggle.classList.toggle('active', Boolean(state.sourceKey));
 }
 
 function createNewsCard(item) {
