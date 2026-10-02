@@ -7,74 +7,172 @@ body{font:17px/1.6 system-ui,sans-serif;color:#182820;background:#f5f7f5;margin:
 main{max-width:760px;margin:32px auto;padding:24px;background:white;border-radius:16px}
 h1{font-size:25px;line-height:1.3}h2{font-size:19px}a{color:#086735;overflow-wrap:anywhere}
 label{display:block;margin:18px 0}button{font:inherit;border:0;border-radius:8px;padding:12px 18px;cursor:pointer;margin:6px 8px 6px 0;background:#086735;color:white}
-button.secondary{background:#e7ece8;color:#182820}button:disabled{opacity:.5;cursor:default}
+button.secondary{background:#e7ece8;color:#182820}button.danger{background:#8f2f2f}button:disabled{opacity:.5;cursor:default}
 .note{color:#526257}.reason{background:#f1f4ed;padding:15px;border-left:4px solid #617f42}
 #error{color:#9c2525}#state{font-weight:600}#matches{padding:16px;background:#fff7e2}
-@media(max-width:600px){main{margin:0;border-radius:0;padding:20px}}
+#decision{margin-top:22px;padding:18px;border:1px solid #dbe3dc;border-radius:12px;background:#fafcf9}
+#decision select,#decision textarea{box-sizing:border-box;width:100%;font:inherit;border:1px solid #afbbb2;border-radius:8px;padding:11px 12px;background:white;color:#182820}
+#decision textarea{min-height:100px;resize:vertical}
+#decision .field{margin:14px 0}
+#savedReason{padding:12px 14px;background:#eef5ef;border-radius:8px}
+@media(max-width:600px){main{margin:0;border-radius:0;padding:20px}button{width:100%;margin:6px 0}}
 </style></head><body><main>
 <p class="note">SEMPRE PENYA · Revisió privada</p><h1 id="title">Carregant la notícia…</h1>
 <p id="meta"></p><p id="dates" class="note"></p><p id="context"></p>
 <p><a id="article" target="_blank" rel="noopener noreferrer">Obre la font original</a></p>
-<p class="reason" id="reason"></p><div id="matches" hidden><h2>Notícies que poden coincidir</h2><div id="matchlist"></div>
+<p class="reason" id="reason"></p>
+<div id="matches" hidden><h2>Notícies que poden coincidir</h2><div id="matchlist"></div>
 <label><input id="confirm" type="checkbox"> He revisat les coincidències i vull publicar aquesta peça igualment.</label></div>
 <p id="state" role="status"></p><p id="error" role="alert"></p>
 <div id="actions" hidden><button id="publish">Publica-la</button><button id="discard" class="secondary">Mantén descartada</button></div>
-<p class="note">La decisió s’aplica a aquesta peça. No modifica automàticament els criteris generals del radar.</p>
+
+<section id="decision" hidden aria-labelledby="decisionTitle">
+<h2 id="decisionTitle">Motiu de la decisió</h2>
+<p class="note" id="decisionHelp"></p>
+<div class="field">
+<label for="reasonCode">Per què?</label>
+<select id="reasonCode"><option value="">Tria un motiu…</option></select>
+</div>
+<div class="field">
+<label for="reasonText" id="reasonTextLabel">Comentari opcional</label>
+<textarea id="reasonText" maxlength="1000" placeholder="Pots afegir context perquè el radar aprengui millor."></textarea>
+</div>
+<div><button id="saveDecision">Desa la decisió</button><button id="cancelDecision" class="secondary">Cancel·la</button></div>
+</section>
+
+<p id="savedReason" hidden></p>
+<p class="note">La decisió s’aplica a aquesta peça. Els motius editorials alimenten l’aprenentatge progressiu; els motius tècnics com duplicat, peça antiga o font canònica queden registrats però no penalitzen cap tipus de notícia.</p>
 </main><script>
 const endpoint="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/radar-discard-review";
-const [id,token,directAction]=location.hash.slice(1).split(".");
+const [reviewId,token,directAction]=location.hash.slice(1).split(".");
 const $=id=>document.getElementById(id);
+let current=null;
+let pendingAction=null;
+
+const reasons={
+ publish:[
+  ["relevant_first_team","És rellevant per al primer equip"],
+  ["new_information","Aporta informació nova o actualitzada"],
+  ["format_value","El format aporta valor propi (vídeo, àudio, entrevista…)"],
+  ["market_followup","És mercat/rumor i vull seguir-lo"],
+  ["other","Un altre motiu…"]
+ ],
+ discard:[
+  ["duplicate","Duplicada / ja tenim la mateixa informació"],
+  ["prefer_canonical","Prefereixo la peça canònica o una altra font"],
+  ["outdated","Massa antiga / fora de finestra"],
+  ["irrelevant_first_team","No és rellevant per al primer equip"],
+  ["low_information","Aporta massa poca informació"],
+  ["promotional","És massa promocional"],
+  ["youth_women_other","És cantera, femení o un altre equip"],
+  ["clickbait","Titular/clicbait sense prou contingut"],
+  ["other","Un altre motiu…"]
+ ]
+};
+const labels=Object.fromEntries([...reasons.publish,...reasons.discard]);
+
 function date(value){return value?new Date(value).toLocaleString("ca-ES",{timeZone:"Europe/Madrid"}):"Desconeguda"}
 function link(node,url){try{const u=new URL(url);if(!["https:","http:"].includes(u.protocol))throw 0;node.href=u.href;node.hidden=false}catch{node.hidden=true}}
+
 function render(data){
+ current=data;
  $("title").textContent=data.title;$("meta").textContent=data.source;
  $("dates").textContent="Publicada: "+date(data.published_at)+" · Primer descart: "+date(data.first_detected_at);
- $("context").textContent=data.context||"";$("reason").textContent="Motiu: "+data.reason;link($("article"),data.url);
+ $("context").textContent=data.context||"";$("reason").textContent="Motiu del radar: "+data.reason;link($("article"),data.url);
  $("matchlist").replaceChildren();
  const matches=data.matches||[];
  $("matches").hidden=!matches.length||data.status!=="pending";
  for(const m of matches){const p=document.createElement("p");const a=document.createElement("a");a.textContent=m.title+" — "+m.source+(m.published?"":" (oculta)");a.target="_blank";a.rel="noopener noreferrer";link(a,m.url);if(a.hidden){a.hidden=false;a.removeAttribute("href")}p.append(a);$("matchlist").append(p)}
  $("state").textContent=({pending:"Pendent de la teva decisió",published:"Publicada al feed",already_published:"Ja estava publicada. No s’ha creat cap duplicat.",kept_discarded:"Es manté descartada. No tornaràs a rebre l’avís."})[data.status]||data.status;
  $("actions").hidden=data.status!=="pending";
+ if(data.status!=="pending") $("decision").hidden=true;
+ const code=data.decision_reason_code||"";
+ const text=data.decision_reason_text||"";
+ if(code||text){
+   $("savedReason").hidden=false;
+   $("savedReason").textContent="Motiu desat: "+(labels[code]||code||"Altres")+(text?" — "+text:"");
+ }else $("savedReason").hidden=true;
  if(data.needs_confirmation)$("error").textContent="Revisa les coincidències i marca la casella abans de publicar.";
 }
-function finishDirectDiscard(data){
- if(directAction!=="discard"||data.status!=="kept_discarded")return;
- $("title").textContent="Descartada ✓";
- $("meta").textContent="";
- $("dates").textContent="";
- $("context").textContent="";
- $("reason").textContent="La notícia es manté descartada.";
- $("article").hidden=true;
- $("matches").hidden=true;
- $("actions").hidden=true;
- $("state").textContent="Decisió desada. Aquesta pestanya es tancarà automàticament si el navegador ho permet.";
- setTimeout(()=>{
-   try{window.close()}catch{}
-   setTimeout(()=>{
-     if(!window.closed && history.length>1){
-       try{history.back()}catch{}
-     }
-   },180);
- },420);
+
+function openDecision(action){
+ if(!current||current.status!=="pending")return;
+ pendingAction=action;
+ $("error").textContent="";
+ $("decision").hidden=false;
+ $("reasonCode").replaceChildren(new Option("Tria un motiu…",""));
+ for(const [value,label] of reasons[action]) $("reasonCode").append(new Option(label,value));
+ $("reasonCode").value="";
+ $("reasonText").value="";
+ $("decisionTitle").textContent=action==="publish"?"Per què la vols publicar?":"Per què la mantens descartada?";
+ $("decisionHelp").textContent=action==="publish"
+   ?"Aquest motiu ens ajuda a entendre quins tipus de peces sí vols al feed."
+   :"Els motius tècnics no penalitzen el tipus de notícia; els editorials sí que alimenten l’aprenentatge progressiu.";
+ $("saveDecision").textContent=action==="publish"?"Confirma la publicació":"Confirma el descart";
+ $("saveDecision").className=action==="publish"?"":"danger";
+ updateReasonTextRequirement();
+ $("decision").scrollIntoView({behavior:"smooth",block:"nearest"});
 }
-async function call(action){
- $("error").textContent="";$("publish").disabled=$("discard").disabled=true;
+
+function updateReasonTextRequirement(){
+ const other=$("reasonCode").value==="other";
+ $("reasonText").required=other;
+ $("reasonTextLabel").textContent=other?"Explica breument el motiu *":"Comentari opcional";
+ $("reasonText").placeholder=other
+   ?"Escriu el motiu que no encaixa amb les opcions anteriors."
+   :"Pots afegir context perquè el radar aprengui millor.";
+}
+
+async function call(action,{reasonCode="",reasonText=""}={}){
+ $("error").textContent="";
+ $("publish").disabled=$("discard").disabled=$("saveDecision").disabled=true;
  try{
- const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,token,action,confirm:$("confirm").checked})});
- const data=await res.json();if(!res.ok)throw new Error(data.error||"No s’ha pogut completar l’acció");
- render(data);
- finishDirectDiscard(data);
- }catch(e){$("error").textContent=e.message;if(action==="read")$("title").textContent="No s’ha pogut obrir la revisió"}
- finally{$("publish").disabled=$("discard").disabled=false}
+   const res=await fetch(endpoint,{
+     method:"POST",
+     headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({
+       id:reviewId,token,action,
+       confirm:$("confirm").checked,
+       reason_code:reasonCode,
+       reason_text:reasonText
+     })
+   });
+   const data=await res.json();
+   if(!res.ok)throw new Error(data.error||"No s’ha pogut completar l’acció");
+   render(data);
+   if(data.needs_confirmation){
+     $("decision").hidden=false;
+     return;
+   }
+   if(data.status!=="pending") $("decision").hidden=true;
+ }catch(e){
+   $("error").textContent=e.message;
+   if(action==="read")$("title").textContent="No s’ha pogut obrir la revisió";
+ }finally{
+   $("publish").disabled=$("discard").disabled=$("saveDecision").disabled=false;
+ }
 }
-$("publish").onclick=()=>call("publish");$("discard").onclick=()=>call("discard");
-if(/^[0-9a-f-]{36}$/.test(id||"")&&/^[0-9a-f]{64}$/.test(token||"")){
-  if(directAction==="publish"||directAction==="discard"){
-    $("title").textContent=directAction==="publish"?"Publicant la notícia…":"Desant la decisió…";
-    $("confirm").checked=true;
-    call(directAction);
-  }else call("read");
+
+$("publish").onclick=()=>openDecision("publish");
+$("discard").onclick=()=>openDecision("discard");
+$("cancelDecision").onclick=()=>{$("decision").hidden=true;pendingAction=null;$("error").textContent=""};
+$("reasonCode").onchange=updateReasonTextRequirement;
+$("saveDecision").onclick=()=>{
+ const code=$("reasonCode").value;
+ const text=$("reasonText").value.trim();
+ if(!code){$("error").textContent="Tria un motiu abans de desar.";return}
+ if(code==="other"&&!text){$("error").textContent="Escriu breument el motiu.";return}
+ call(pendingAction,{reasonCode:code,reasonText:text});
+};
+
+if(/^[0-9a-f-]{36}$/.test(reviewId||"")&&/^[0-9a-f]{64}$/.test(token||"")){
+ call("read").then(()=>{
+   if((directAction==="publish"||directAction==="discard")&&current&&current.status==="pending"){
+     openDecision(directAction);
+   }
+ });
+}else{
+ $("title").textContent="Obre l’enllaç del correu";
+ $("reason").textContent="Cada avís conté un enllaç privat per revisar aquella notícia.";
 }
-else{$("title").textContent="Obre l’enllaç del correu";$("reason").textContent="Cada avís conté un enllaç privat per revisar aquella notícia."}
 </script></body></html>
