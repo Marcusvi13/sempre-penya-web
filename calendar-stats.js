@@ -3,7 +3,8 @@
   const SUPABASE_URL = 'https://busuaaaamcojjtavhrne.supabase.co';
   const PUBLIC_KEY = 'sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8';
   const CALENDAR_URL = `${SUPABASE_URL}/rest/v1/calendar_results?select=game_key,game_date,date_text,competition,matchup,score,played,stats_url,sort_order,visible&order=sort_order.asc`;
-  const STATS_URL = `${SUPABASE_URL}/rest/v1/season_player_game_stats?select=game_key,game_date,competition,player_key,player_name,minutes_seconds,points,rebounds,assists,valuation&order=game_date.desc`;
+  const STATS_URL = `${SUPABASE_URL}/rest/v1/season_player_game_stats?select=*&order=game_date.desc`;
+  const STATS_CONFIG_URL = `${SUPABASE_URL}/rest/v1/season_stats_ui_config?id=eq.default&select=config&limit=1`;
 
   const seasonGames = [
     ['2026-08-29','29/08/2026 · 21:00','Pretemporada','Asisa Joventut – Monbus Obradoiro','77–96',true,'https://acb.com/docs/descarga/Pretemporada2627/statsobra.jpg'],
@@ -55,10 +56,52 @@
     ['2027-05-21','21/22/23-05-2027 · hora pendent','Liga Endesa · J34','Kids&Us Manresa – Asisa Joventut','',false,'']
   ].map(([key,date,competition,matchup,score,played,statsUrl]) => ({ key,date,competition,matchup,score,played,statsUrl }));
 
+  const DEFAULT_STATS_CONFIG = {
+    last_game_options: [1, 3, 5, 7, 9],
+    expanded_button_label: 'Estadístiques ampliades',
+    compact_columns: [
+      { key: 'games', label: 'PJ', kind: 'games', width: 38 },
+      { key: 'minutes', label: 'MIN', kind: 'avg_seconds', field: 'minutes_seconds', decimals: 1, width: 46 },
+      { key: 'points', label: 'PTS', kind: 'avg', field: 'points', decimals: 1, width: 44 },
+      { key: 'rebounds', label: 'REB', kind: 'avg', field: 'rebounds', decimals: 1, width: 44 },
+      { key: 'assists', label: 'AST', kind: 'avg', field: 'assists', decimals: 1, width: 44 },
+      { key: 'valuation', label: 'VAL', kind: 'avg', field: 'valuation', decimals: 1, width: 44 }
+    ],
+    expanded_columns: [
+      { key: 'number', label: 'Nº', kind: 'latest_text', field: 'jersey_number', decimals: 0, width: 34 },
+      { key: 'games', label: 'PJ', kind: 'games', decimals: 0, width: 34 },
+      { key: 'minutes', label: 'MIN', kind: 'avg_seconds', field: 'minutes_seconds', decimals: 1, width: 43 },
+      { key: 'points', label: 'PTS', kind: 'avg', field: 'points', decimals: 1, width: 40 },
+      { key: 't2_ai', label: 'T2', kind: 'pair_avg', made_field: 'two_made', attempted_field: 'two_attempted', decimals: 1, width: 60 },
+      { key: 't2_pct', label: 'T2%', kind: 'ratio_pct', made_field: 'two_made', attempted_field: 'two_attempted', decimals: 1, width: 47 },
+      { key: 't3_ai', label: 'T3', kind: 'pair_avg', made_field: 'three_made', attempted_field: 'three_attempted', decimals: 1, width: 60 },
+      { key: 't3_pct', label: 'T3%', kind: 'ratio_pct', made_field: 'three_made', attempted_field: 'three_attempted', decimals: 1, width: 47 },
+      { key: 'tl_ai', label: 'TL', kind: 'pair_avg', made_field: 'free_made', attempted_field: 'free_attempted', decimals: 1, width: 60 },
+      { key: 'tl_pct', label: 'TL%', kind: 'ratio_pct', made_field: 'free_made', attempted_field: 'free_attempted', decimals: 1, width: 47 },
+      { key: 'def_reb', label: 'RD', kind: 'avg', field: 'defensive_rebounds', decimals: 1, width: 40 },
+      { key: 'off_reb', label: 'RO', kind: 'avg', field: 'offensive_rebounds', decimals: 1, width: 40 },
+      { key: 'rebounds', label: 'REB', kind: 'avg', field: 'rebounds', decimals: 1, width: 44 },
+      { key: 'assists', label: 'AST', kind: 'avg', field: 'assists', decimals: 1, width: 42 },
+      { key: 'steals', label: 'REC', kind: 'avg', field: 'steals', decimals: 1, width: 42 },
+      { key: 'turnovers', label: 'PÈR', kind: 'avg', field: 'turnovers', decimals: 1, width: 42 },
+      { key: 'blocks', label: 'TAP', kind: 'avg', field: 'blocks', decimals: 1, width: 42 },
+      { key: 'blocks_received', label: 'TR', kind: 'avg', field: 'blocks_received', decimals: 1, width: 40 },
+      { key: 'dunks', label: 'MAT', kind: 'avg', field: 'dunks', decimals: 1, width: 42 },
+      { key: 'fouls_committed', label: 'FP', kind: 'avg', field: 'fouls_committed', decimals: 1, width: 40 },
+      { key: 'fouls_received', label: 'FR', kind: 'avg', field: 'fouls_received', decimals: 1, width: 40 },
+      { key: 'valuation', label: 'VAL', kind: 'avg', field: 'valuation', decimals: 1, width: 44 },
+      { key: 'plus_minus', label: '+/-', kind: 'sum', field: 'plus_minus', decimals: 0, signed: true, width: 44 }
+    ]
+  };
+
   const statsState = {
     rows: null,
+    uiConfig: DEFAULT_STATS_CONFIG,
     competition: 'Totes',
-    lastGames: 10
+    lastGames: null,
+    expanded: false,
+    sortKey: 'valuation',
+    sortDirection: 'desc'
   };
 
   function localDateKey() {
@@ -125,8 +168,9 @@
               </div>
               <div>
                 <p class="stats-control-label">Darrers partits</p>
-                <div class="stats-chip-row stats-last-games" id="stats-last-games">
-                  ${Array.from({ length: 10 }, (_, i) => `<button type="button" data-last-games="${i + 1}">${i + 1}</button>`).join('')}
+                <div class="stats-scope-row">
+                  <button type="button" id="stats-expanded" class="stats-expand-toggle">Estadístiques ampliades</button>
+                  <div class="stats-chip-row stats-last-games" id="stats-last-games"></div>
                 </div>
               </div>
             </div>
@@ -134,14 +178,11 @@
             <p id="stats-summary" class="stats-summary">Carregant estadístiques…</p>
             <p id="stats-message" class="feature-inline-message" hidden></p>
             <div class="stats-table-wrap">
-              <table class="stats-table" aria-label="Mitjanes dels jugadors">
-                <thead>
-                  <tr><th>Jugador</th><th>PJ</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>VAL</th></tr>
-                </thead>
+              <table class="stats-table" id="stats-table" aria-label="Mitjanes dels jugadors">
+                <thead id="stats-head"></thead>
                 <tbody id="stats-body"></tbody>
               </table>
-            </div>
-          </section>
+            </div>          </section>
         </div>`);
     }
   }
@@ -308,14 +349,117 @@
     return card;
   }
 
-  function oneDecimal(value) {
+  function formatNumber(value, decimals = 1) {
     return new Intl.NumberFormat('ca-ES', {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1
-    }).format(value);
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(Number.isFinite(value) ? value : 0);
+  }
+
+  function normalizeColumn(item) {
+    if (!item || typeof item !== 'object') return null;
+    const key = String(item.key || '').trim();
+    const label = String(item.label || '').trim();
+    const kind = String(item.kind || '').trim();
+    if (!key || !label || !kind) return null;
+    return {
+      key,
+      label,
+      kind,
+      field: String(item.field || ''),
+      made_field: String(item.made_field || ''),
+      attempted_field: String(item.attempted_field || ''),
+      decimals: Math.min(2, Math.max(0, Number(item.decimals ?? 1) || 0)),
+      signed: Boolean(item.signed),
+      width: Math.min(90, Math.max(30, Number(item.width || 44) || 44))
+    };
+  }
+
+  function normalizeStatsConfig(rawConfig) {
+    const raw = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+    const options = Array.isArray(raw.last_game_options)
+      ? [...new Set(raw.last_game_options.map(Number).filter((n) => Number.isInteger(n) && n > 0))]
+      : [];
+    const compact = Array.isArray(raw.compact_columns)
+      ? raw.compact_columns.map(normalizeColumn).filter(Boolean)
+      : [];
+    const expanded = Array.isArray(raw.expanded_columns)
+      ? raw.expanded_columns.map(normalizeColumn).filter(Boolean)
+      : [];
+
+    return {
+      last_game_options: options.length ? options : DEFAULT_STATS_CONFIG.last_game_options,
+      expanded_button_label: String(raw.expanded_button_label || '').trim() || DEFAULT_STATS_CONFIG.expanded_button_label,
+      compact_columns: compact.length ? compact : DEFAULT_STATS_CONFIG.compact_columns,
+      expanded_columns: expanded.length ? expanded : DEFAULT_STATS_CONFIG.expanded_columns
+    };
+  }
+
+  function currentStatsColumns() {
+    return statsState.expanded
+      ? statsState.uiConfig.expanded_columns
+      : statsState.uiConfig.compact_columns;
+  }
+
+  function rowNumber(row, field) {
+    const value = Number(row?.[field]);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function latestPlayerRow(rows) {
+    return rows.reduce((latest, row) => {
+      if (!latest) return row;
+      return String(row.game_date || '') > String(latest.game_date || '') ? row : latest;
+    }, null);
+  }
+
+  function aggregateColumn(column, rows, games, latest) {
+    const decimals = Number(column.decimals ?? 1);
+    if (column.kind === 'games') {
+      return { display: String(games), sortValue: games };
+    }
+    if (column.kind === 'avg_seconds') {
+      const value = rows.reduce((sum, row) => sum + rowNumber(row, column.field), 0) / games / 60;
+      return { display: formatNumber(value, decimals), sortValue: value };
+    }
+    if (column.kind === 'avg') {
+      const value = rows.reduce((sum, row) => sum + rowNumber(row, column.field), 0) / games;
+      return { display: formatNumber(value, decimals), sortValue: value };
+    }
+    if (column.kind === 'sum') {
+      const value = rows.reduce((sum, row) => sum + rowNumber(row, column.field), 0);
+      const display = column.signed && value > 0 ? `+${value}` : String(value);
+      return { display, sortValue: value };
+    }
+    if (column.kind === 'count_true') {
+      const value = rows.filter((row) => Boolean(row?.[column.field])).length;
+      return { display: String(value), sortValue: value };
+    }
+    if (column.kind === 'latest_text') {
+      const display = String(latest?.[column.field] ?? '').trim() || '—';
+      const numeric = Number(String(display).replace(',', '.'));
+      return { display, sortValue: Number.isFinite(numeric) ? numeric : display };
+    }
+    if (column.kind === 'pair_avg') {
+      const made = rows.reduce((sum, row) => sum + rowNumber(row, column.made_field), 0) / games;
+      const attempted = rows.reduce((sum, row) => sum + rowNumber(row, column.attempted_field), 0) / games;
+      return {
+        display: `${formatNumber(made, decimals)}/${formatNumber(attempted, decimals)}`,
+        sortValue: made,
+        secondarySortValue: attempted
+      };
+    }
+    if (column.kind === 'ratio_pct') {
+      const made = rows.reduce((sum, row) => sum + rowNumber(row, column.made_field), 0);
+      const attempted = rows.reduce((sum, row) => sum + rowNumber(row, column.attempted_field), 0);
+      const value = attempted > 0 ? made * 100 / attempted : 0;
+      return { display: formatNumber(value, decimals), sortValue: value };
+    }
+    return { display: '—', sortValue: 0 };
   }
 
   function statsResult() {
+    const columns = currentStatsColumns();
     const filtered = (statsState.rows || []).filter((row) =>
       statsState.competition === 'Totes' || row.competition === statsState.competition
     );
@@ -326,70 +470,171 @@
       if (!gameMap.has(key)) gameMap.set(key, String(row.game_date || row.game_key || ''));
     });
 
-    const selectedGames = [...gameMap.entries()]
-      .sort((x, y) => y[1].localeCompare(x[1]))
-      .slice(0, statsState.lastGames)
-      .map(([key]) => key);
+    const allGames = [...gameMap.entries()].sort((a, b) => b[1].localeCompare(a[1]));
+    const selectedGames = (statsState.lastGames == null
+      ? allGames
+      : allGames.slice(0, Math.max(1, statsState.lastGames))
+    ).map(([key]) => key);
 
     const selectedSet = new Set(selectedGames);
     const byPlayer = new Map();
 
     filtered.forEach((row) => {
       const gameKey = `${row.competition}|${row.game_key}`;
-      const minutesSeconds = Number(row.minutes_seconds || 0);
+      const minutesSeconds = rowNumber(row, 'minutes_seconds');
       if (!selectedSet.has(gameKey) || minutesSeconds <= 0) return;
 
       const key = String(row.player_key || row.player_name || '').trim();
       if (!key) return;
-      const current = byPlayer.get(key) || {
-        playerName: String(row.player_name || ''),
-        games: 0,
-        minutesSeconds: 0,
-        points: 0,
-        rebounds: 0,
-        assists: 0,
-        valuation: 0
-      };
-      current.playerName = String(row.player_name || current.playerName);
-      current.games += 1;
-      current.minutesSeconds += minutesSeconds;
-      current.points += Number(row.points || 0);
-      current.rebounds += Number(row.rebounds || 0);
-      current.assists += Number(row.assists || 0);
-      current.valuation += Number(row.valuation || 0);
-      byPlayer.set(key, current);
+      if (!byPlayer.has(key)) byPlayer.set(key, []);
+      byPlayer.get(key).push(row);
     });
 
-    const players = [...byPlayer.entries()].map(([key, row]) => ({
-      key,
-      name: row.playerName,
-      games: row.games,
-      minutes: row.minutesSeconds / row.games / 60,
-      points: row.points / row.games,
-      rebounds: row.rebounds / row.games,
-      assists: row.assists / row.games,
-      valuation: row.valuation / row.games
-    })).sort((x, y) =>
-      (y.valuation - x.valuation) ||
-      (y.points - x.points) ||
-      x.name.localeCompare(y.name, 'ca')
-    );
+    const players = [...byPlayer.entries()].map(([key, playerRows]) => {
+      const clean = playerRows.filter((row) => String(row.player_name || '').trim());
+      const games = clean.length;
+      const latest = latestPlayerRow(clean);
+      const values = {};
+      const sortValues = {};
+      const secondarySortValues = {};
+      columns.forEach((column) => {
+        const agg = aggregateColumn(column, clean, games, latest);
+        values[column.key] = agg.display;
+        sortValues[column.key] = agg.sortValue;
+        secondarySortValues[column.key] = agg.secondarySortValue ?? null;
+      });
+      return {
+        key,
+        name: String(latest?.player_name || ''),
+        values,
+        sortValues,
+        secondarySortValues
+      };
+    });
 
-    return { games: selectedGames.length, players };
+    const direction = statsState.sortDirection === 'asc' ? 1 : -1;
+    const collator = new Intl.Collator('ca', { sensitivity: 'base', numeric: true });
+    players.sort((a, b) => {
+      if (statsState.sortKey === '__name__') {
+        return collator.compare(a.name, b.name) * direction;
+      }
+      const av = a.sortValues[statsState.sortKey];
+      const bv = b.sortValues[statsState.sortKey];
+      if (typeof av === 'number' && typeof bv === 'number' && av !== bv) {
+        return (av - bv) * direction;
+      }
+      if (String(av ?? '') !== String(bv ?? '')) {
+        return collator.compare(String(av ?? ''), String(bv ?? '')) * direction;
+      }
+      const as = a.secondarySortValues[statsState.sortKey];
+      const bs = b.secondarySortValues[statsState.sortKey];
+      if (typeof as === 'number' && typeof bs === 'number' && as !== bs) {
+        return (as - bs) * direction;
+      }
+      const aval = Number(a.sortValues.valuation ?? 0);
+      const bval = Number(b.sortValues.valuation ?? 0);
+      if (aval !== bval) return bval - aval;
+      return collator.compare(a.name, b.name);
+    });
+
+    return { games: selectedGames.length, players, columns };
+  }
+
+  function setSort(key) {
+    if (!key) return;
+    if (statsState.sortKey === key) {
+      statsState.sortDirection = statsState.sortDirection === 'desc' ? 'asc' : 'desc';
+    } else {
+      statsState.sortKey = key;
+      statsState.sortDirection = key === '__name__' ? 'asc' : 'desc';
+    }
+    renderStats();
+  }
+
+  function renderSortButton(th, label, key) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'stats-sort-button';
+    button.dataset.statsSortKey = key;
+    const active = statsState.sortKey === key;
+    button.textContent = active
+      ? `${label} ${statsState.sortDirection === 'desc' ? '↓' : '↑'}`
+      : label;
+    button.setAttribute('aria-label', active
+      ? `${label}, ordre ${statsState.sortDirection === 'desc' ? 'descendent' : 'ascendent'}`
+      : `Ordena per ${label}`);
+    th.append(button);
+    if (active) th.setAttribute('aria-sort', statsState.sortDirection === 'desc' ? 'descending' : 'ascending');
+  }
+
+  function renderStatsHeader(columns) {
+    const head = document.getElementById('stats-head');
+    const table = document.getElementById('stats-table');
+    if (!head || !table) return;
+
+    const tr = document.createElement('tr');
+    const playerTh = document.createElement('th');
+    playerTh.style.minWidth = '116px';
+    renderSortButton(playerTh, 'Jugador', '__name__');
+    tr.append(playerTh);
+
+    let totalWidth = 116;
+    columns.forEach((column) => {
+      const th = document.createElement('th');
+      th.style.minWidth = `${column.width}px`;
+      renderSortButton(th, column.label, column.key);
+      tr.append(th);
+      totalWidth += column.width;
+    });
+
+    head.replaceChildren(tr);
+    table.style.minWidth = `${Math.max(650, totalWidth + 24)}px`;
+  }
+
+  function renderStatsControls() {
+    document.querySelectorAll('[data-competition]').forEach((button) => {
+      const selected = button.dataset.competition === statsState.competition;
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+
+    const expanded = document.getElementById('stats-expanded');
+    if (expanded) {
+      expanded.textContent = statsState.uiConfig.expanded_button_label;
+      expanded.classList.toggle('selected', statsState.expanded);
+      expanded.setAttribute('aria-pressed', String(statsState.expanded));
+    }
+
+    const lastGames = document.getElementById('stats-last-games');
+    if (lastGames) {
+      lastGames.replaceChildren();
+      statsState.uiConfig.last_game_options.forEach((count) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.lastGames = String(count);
+        button.textContent = String(count);
+        const selected = statsState.lastGames === count;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-pressed', String(selected));
+        lastGames.append(button);
+      });
+    }
   }
 
   function renderStats() {
-    document.querySelectorAll('[data-competition]').forEach((button) => {
-      button.classList.toggle('selected', button.dataset.competition === statsState.competition);
-    });
-    document.querySelectorAll('[data-last-games]').forEach((button) => {
-      button.classList.toggle('selected', Number(button.dataset.lastGames) === statsState.lastGames);
-    });
+    renderStatsControls();
 
     const body = document.getElementById('stats-body');
     const summary = document.getElementById('stats-summary');
     const message = document.getElementById('stats-message');
     if (!body || !summary || !message) return;
+
+    const columns = currentStatsColumns();
+    if (statsState.sortKey !== '__name__' && !columns.some((column) => column.key === statsState.sortKey)) {
+      statsState.sortKey = columns.some((column) => column.key === 'valuation') ? 'valuation' : '__name__';
+      statsState.sortDirection = statsState.sortKey === '__name__' ? 'asc' : 'desc';
+    }
+    renderStatsHeader(columns);
 
     if (!Array.isArray(statsState.rows)) {
       summary.textContent = 'Carregant estadístiques…';
@@ -398,7 +643,10 @@
     }
 
     const result = statsResult();
-    summary.textContent = `Mitjanes · ${result.games} partit${result.games === 1 ? '' : 's'} disponible${result.games === 1 ? '' : 's'}`;
+    const scope = statsState.lastGames == null
+      ? 'Mitjanes temporada'
+      : `Mitjanes darrers ${statsState.lastGames} partits`;
+    summary.textContent = `${scope} · ${result.games} partit${result.games === 1 ? '' : 's'} disponible${result.games === 1 ? '' : 's'}`;
 
     body.replaceChildren();
     if (!result.players.length) {
@@ -413,20 +661,19 @@
 
     result.players.forEach((player) => {
       const tr = document.createElement('tr');
-      const values = [
-        player.name,
-        String(player.games),
-        oneDecimal(player.minutes),
-        oneDecimal(player.points),
-        oneDecimal(player.rebounds),
-        oneDecimal(player.assists),
-        oneDecimal(player.valuation)
-      ];
-      values.forEach((value, index) => {
-        const cell = document.createElement(index === 0 ? 'th' : 'td');
-        cell.textContent = value;
-        if (index === 0) cell.scope = 'row';
-        tr.append(cell);
+
+      const name = document.createElement('th');
+      name.scope = 'row';
+      name.textContent = player.name;
+      name.style.minWidth = '116px';
+      tr.append(name);
+
+      result.columns.forEach((column) => {
+        const td = document.createElement('td');
+        td.textContent = player.values[column.key] || '—';
+        td.style.minWidth = `${column.width}px`;
+        if (column.key === 'valuation') td.classList.add('stats-valuation');
+        tr.append(td);
       });
       body.append(tr);
     });
@@ -442,14 +689,34 @@
     if (message) message.hidden = true;
     renderStats();
 
-    try {
-      const response = await fetch(STATS_URL, {
-        cache: 'no-store',
-        headers: { apikey: PUBLIC_KEY, Accept: 'application/json' }
+    const headers = { apikey: PUBLIC_KEY, Accept: 'application/json' };
+    const configPromise = fetch(STATS_CONFIG_URL, { cache: 'no-store', headers })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Config HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((rows) => normalizeStatsConfig(Array.isArray(rows) && rows[0] ? rows[0].config : null))
+      .catch((error) => {
+        console.warn('Season stats config unavailable; using fallback', error);
+        return normalizeStatsConfig(DEFAULT_STATS_CONFIG);
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const rows = await response.json();
-      if (!Array.isArray(rows)) throw new Error('Resposta d’estadístiques invàlida');
+
+    const rowsPromise = fetch(STATS_URL, { cache: 'no-store', headers })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Stats HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((rows) => {
+        if (!Array.isArray(rows)) throw new Error('Resposta d’estadístiques invàlida');
+        return rows;
+      });
+
+    try {
+      const [uiConfig, rows] = await Promise.all([configPromise, rowsPromise]);
+      statsState.uiConfig = uiConfig;
+      if (statsState.lastGames != null && !uiConfig.last_game_options.includes(statsState.lastGames)) {
+        statsState.lastGames = null;
+      }
       statsState.rows = rows;
       renderStats();
     } catch (error) {
@@ -464,7 +731,6 @@
       }
     }
   }
-
   function bindUi() {
     const calendarOpen = document.getElementById('calendar-open');
     const statsOpen = document.getElementById('stats-open');
@@ -497,11 +763,24 @@
         renderStats();
       });
     });
-    document.querySelectorAll('[data-last-games]').forEach((button) => {
-      button.addEventListener('click', () => {
-        statsState.lastGames = Math.min(10, Math.max(1, Number(button.dataset.lastGames) || 10));
-        renderStats();
-      });
+    document.getElementById('stats-expanded')?.addEventListener('click', () => {
+      statsState.expanded = !statsState.expanded;
+      renderStats();
+    });
+
+    document.getElementById('stats-last-games')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-last-games]');
+      if (!button) return;
+      const count = Number(button.dataset.lastGames);
+      if (!Number.isInteger(count) || count <= 0) return;
+      statsState.lastGames = statsState.lastGames === count ? null : count;
+      renderStats();
+    });
+
+    document.getElementById('stats-head')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-stats-sort-key]');
+      if (!button) return;
+      setSort(button.dataset.statsSortKey || '');
     });
 
     document.addEventListener('keydown', (event) => {
