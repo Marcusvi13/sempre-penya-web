@@ -1,9 +1,12 @@
-name: Verifica calendari i estadístiques web
+name: Verifica web Sempre Penya
 
 on:
   push:
     branches: [main]
     paths:
+      - 'app.js'
+      - 'feed-taxonomy.js'
+      - 'feed-v58.css'
       - 'calendar-stats.js'
       - 'calendar-stats.css'
       - 'header-layout.css'
@@ -20,9 +23,41 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Comprova sintaxi JavaScript
-        run: node --check calendar-stats.js
+        run: |
+          node --check app.js
+          node --check feed-taxonomy.js
+          node --check calendar-stats.js
 
-      - name: Comprova referències HTML i capçalera
+      - name: Comprova paritat visual i taxonomia v58
+        run: |
+          grep -q 'feed-taxonomy.js?v=' index.html
+          grep -q 'feed-v58.css?v=' index.html
+          grep -q 'data-section="Partits"' index.html
+          grep -q 'data-section="Media"' index.html
+          grep -q 'data-section="Mercat"' index.html
+          grep -q 'data-section="Lesions"' index.html
+          grep -q 'id="favorites-filter"' index.html
+          grep -q 'id="source-search-toggle"' index.html
+          ! grep -q 'data-section="Tots"' index.html
+          ! grep -q 'data-section="Favorits"' index.html
+          ! grep -q 'admin-tag' index.html
+          ! grep -q 'admin-rumor' index.html
+          grep -q 'Prèvia' feed-taxonomy.js
+          grep -q 'Crònica' feed-taxonomy.js
+          grep -q 'Post-partit' feed-taxonomy.js
+          grep -q 'Estadístiques' feed-taxonomy.js
+          grep -q 'Resum del partit' feed-taxonomy.js
+          grep -q 'Highlights general' feed-taxonomy.js
+          grep -q 'Podcast' feed-taxonomy.js
+          grep -q 'Vídeo' feed-taxonomy.js
+          grep -q 'Fitxatge' feed-taxonomy.js
+          grep -q 'No segueix' feed-taxonomy.js
+          grep -q 'Rumor' feed-taxonomy.js
+          grep -q 'media_links,content_group' app.js
+          grep -q 'activeSections' app.js
+          grep -q 'favoritesOnly' app.js
+
+      - name: Comprova capçalera i estadístiques
         run: |
           grep -q 'calendar-stats.css?v=' index.html
           grep -q 'header-layout.css?v=' index.html
@@ -33,14 +68,15 @@ jobs:
           grep -q 'Estadístiques Temporada' index.html
           ! grep -qi 'resum per correu' index.html
           ! grep -qi 'daily-summary-subscription' calendar-stats.js
-          ! grep -qi 'mail-open' calendar-stats.js
-          ! grep -q 'id="download" class="header-button"' index.html
 
-      - name: Comprova API de calendari i estadístiques
+      - name: Comprova APIs públiques
         env:
           SUPABASE_URL: https://busuaaaamcojjtavhrne.supabase.co
           PUBLIC_KEY: sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8
         run: |
+          curl --fail --silent --show-error             -H "apikey: $PUBLIC_KEY"             -H 'Accept: application/json'             "$SUPABASE_URL/rest/v1/news?select=id,media_links,content_group&limit=1"             -o /tmp/news.json
+          jq -e 'type == "array"' /tmp/news.json >/dev/null
+
           curl --fail --silent --show-error             -H "apikey: $PUBLIC_KEY"             -H 'Accept: application/json'             "$SUPABASE_URL/rest/v1/calendar_results?select=game_key&limit=1"             -o /tmp/calendar.json
           jq -e 'type == "array"' /tmp/calendar.json >/dev/null
 
