@@ -168,8 +168,43 @@
     </section>
   </div>
 
+
+  <div id="reject-modal" class="modal-backdrop" hidden>
+    <section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+      <div class="modal-heading">
+        <div>
+          <p class="side-label">SEMPRE PENYA · FEEDBACK</p>
+          <h2 id="reject-title">Per què la descartes?</h2>
+        </div>
+        <button id="reject-close" class="icon-button" type="button" aria-label="Tanca">×</button>
+      </div>
+      <p id="reject-item-title" class="admin-help"></p>
+      <label class="field-label" for="reject-reason">Motiu</label>
+      <select id="reject-reason" class="field-input">
+        <option value="">Tria un motiu…</option>
+        <option value="duplicate">Duplicada / ja tenim la mateixa informació</option>
+        <option value="prefer_canonical">Prefereixo la peça canònica o una altra font</option>
+        <option value="outdated">Massa antiga / fora de finestra</option>
+        <option value="irrelevant_first_team">No és rellevant per al primer equip</option>
+        <option value="low_information">Aporta massa poca informació</option>
+        <option value="promotional">És massa promocional</option>
+        <option value="youth_women_other">És cantera, femení o un altre equip</option>
+        <option value="clickbait">Titular/clicbait sense prou contingut</option>
+        <option value="other">Un altre motiu…</option>
+      </select>
+      <label class="field-label" id="reject-comment-label" for="reject-comment">Comentari opcional</label>
+      <textarea id="reject-comment" class="field-input" rows="4" maxlength="1000" placeholder="Pots afegir context perquè el radar aprengui millor."></textarea>
+      <p class="choice-note">Duplicada, antiga i preferència per la peça canònica queden registrades però no penalitzen el tipus de notícia.</p>
+      <p id="reject-error" class="form-error" role="alert" hidden></p>
+      <div class="form-actions">
+        <button id="reject-cancel" class="secondary-action" type="button">Cancel·la</button>
+        <button id="reject-save" class="danger-action" type="button">Descarta</button>
+      </div>
+    </section>
+  </div>
+
   <script src="feed-taxonomy.js?v=1" defer></script>
-  <script src="app.js?v=8" defer></script>
+  <script src="app.js?v=9" defer></script>
   <script src="order-fix.js?v=1" defer></script>
   <script src="source-logos.js?v=1" defer></script>
   <script src="calendar-stats.js?v=2" defer></script>
