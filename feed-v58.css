@@ -1,0 +1,134 @@
+/* SEMPRE PENYA — paritat visual del feed web amb Android v58. */
+
+.category-filters {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px 0 8px;
+}
+
+.category-filters .filter-chip,
+.category-filters .source-search-wrap {
+  min-width: 0;
+  width: 100%;
+}
+
+.category-filters .filter-chip {
+  min-height: 39px;
+  border-radius: 9px;
+  padding: 0 4px;
+  font-size: .74rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.category-filters .source-search-wrap {
+  position: relative;
+  margin: 0;
+}
+
+.category-filters .source-search-toggle {
+  width: 100%;
+  min-height: 39px;
+  border-radius: 9px;
+  padding: 0 4px;
+  border-color: #475569;
+  color: #475569;
+}
+
+.category-filters .source-search-toggle.selected,
+.category-filters .source-search-toggle.active {
+  background: #475569;
+  border-color: #475569;
+  color: #fff;
+}
+
+.category-filters [data-section="Partits"].selected {
+  background: #005441;
+  border-color: #005441;
+  color: #fff;
+}
+
+.category-filters [data-section="Media"].selected {
+  background: #0891b2;
+  border-color: #0891b2;
+  color: #fff;
+}
+
+.category-filters [data-section="Mercat"].selected {
+  background: #f97316;
+  border-color: #f97316;
+  color: #fff;
+}
+
+.category-filters [data-section="Lesions"].selected {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.category-filters .favorite-chip.selected {
+  background: #facc15;
+  border-color: #facc15;
+  color: #713f12;
+}
+
+.source-tools-row:has(.toolbar-download-button[style*="display: none"]) {
+  display: none;
+}
+
+.news-media-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 7px;
+  padding-left: 38px;
+}
+
+.news-media-actions .read-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 18px;
+  font-size: .76rem;
+}
+
+.news-tag {
+  line-height: 1.25;
+}
+
+@media (max-width: 620px) {
+  .category-filters {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .category-filters .filter-chip,
+  .category-filters .source-search-toggle {
+    min-height: 37px;
+    padding: 0 2px;
+    font-size: .62rem;
+  }
+
+  .news-media-actions {
+    padding-left: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .news-media-actions .read-button {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .category-filters .filter-chip,
+  .category-filters .source-search-toggle {
+    font-size: .58rem;
+  }
+}
