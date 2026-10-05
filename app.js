@@ -102,6 +102,12 @@ function normalizeText(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+function sourceKey(item) {
+  const sourceId = String(item.source_id || '').trim();
+  if (sourceId && sourceId !== 'manual') return sourceId;
+  return 'name:' + normalizeText(item.source);
+}
+
 function normalizedMedia(item) {
   return Boolean(item.is_media) || item.section === 'Media' || ['video','podcast','audio','foto'].includes(normalizeText(item.type));
 }
@@ -110,7 +116,7 @@ function visibleItems() {
   return state.items.filter((item) => {
     const sectionOk = state.activeSections.size === 0 || [...state.activeSections].some((selected) => selected === 'Media' ? normalizedMedia(item) : item.section === selected);
     const favoriteOk = !state.favoritesOnly || state.favorites.has(item.id);
-    const itemSourceKey = String(item.source_id || '').trim() || ('name:' + normalizeText(item.source));
+    const itemSourceKey = sourceKey(item);
     const sourceOk = !state.sourceKey || itemSourceKey === state.sourceKey;
     return sectionOk && favoriteOk && sourceOk;
   });
@@ -143,7 +149,7 @@ function renderSourceFilters() {
   if (!menu || !toggle) return;
   const grouped = new Map();
   state.items.forEach((item) => {
-    const key = String(item.source_id || '').trim() || ('name:' + normalizeText(item.source));
+    const key = sourceKey(item);
     const current = grouped.get(key) || { key, name: String(item.source || '').trim() || 'Font desconeguda', count: 0 };
     current.count += 1;
     grouped.set(key, current);
