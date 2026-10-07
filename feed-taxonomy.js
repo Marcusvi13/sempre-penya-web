@@ -8,7 +8,7 @@ window.SEMPRE_PENYA_FEED_TAXONOMY = Object.freeze({
   }),
   subcategories: Object.freeze({
     Partits: Object.freeze(["Prèvia", "Crònica", "Post-partit", "Estadístiques"]),
-    Media: Object.freeze(["Resum del partit", "Highlights general", "Post-partit", "Podcast", "Vídeo", "Entrevista"]),
+    Media: Object.freeze(["Resum del partit", "Highlights general", "Post-partit", "Àudio", "Vídeo", "Entrevista"]),
     Mercat: Object.freeze(["Fitxatge", "No segueix", "Rumor"]),
     Lesions: Object.freeze([])
   })
