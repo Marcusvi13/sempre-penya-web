@@ -3,7 +3,7 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_OTXxn8gyKvPzbhTPudOj9g_Ab79QJl8
 const META_URL = `${SUPABASE_URL}/storage/v1/object/public/app-downloads/latest.json`;
 const APK_URL = `${SUPABASE_URL}/functions/v1/app-download?source=web`;
 const RETENTION_DAYS = 90;
-const FEED_TAXONOMY = window.SEMPRE_PENYA_FEED_TAXONOMY;
+let FEED_TAXONOMY = window.SEMPRE_PENYA_FEED_TAXONOMY;
 if (!FEED_TAXONOMY) throw new Error('No s’ha carregat la taxonomia canònica del feed');
 
 const state = {
@@ -100,6 +100,96 @@ function formatDate(value) {
 
 function normalizeText(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normalizeRemoteTaxonomy(config) {
+  const rawSections = Array.isArray(config && config.sections) ? config.sections : [];
+  const sections = rawSections
+    .map((entry) => ({
+      key: String(entry && entry.key || '').trim(),
+      label: String(entry && entry.label || entry && entry.key || '').trim(),
+      filter: entry && entry.filter !== false,
+      editor: entry && entry.editor !== false,
+      color: String(entry && entry.color || '#64748B').trim(),
+      subcategories: Array.isArray(entry && entry.subcategories)
+        ? [...new Set(entry.subcategories.map((value) => String(value || '').trim()).filter(Boolean))]
+        : []
+    }))
+    .filter((entry, index, all) => entry.key && all.findIndex((other) => other.key === entry.key) === index);
+
+  if (!sections.length || !sections.some((entry) => entry.filter)) return null;
+  return {
+    sections: Object.freeze(sections.filter((entry) => entry.filter).map((entry) => entry.key)),
+    editorSections: Object.freeze(sections.filter((entry) => entry.editor).map((entry) => entry.key)),
+    displaySections: Object.freeze(Object.fromEntries(sections.map((entry) => [entry.key, entry.label || entry.key]))),
+    subcategories: Object.freeze(Object.fromEntries(sections.map((entry) => [entry.key, Object.freeze(entry.subcategories)]))),
+    colors: Object.freeze(Object.fromEntries(sections.map((entry) => [entry.key, entry.color])))
+  };
+}
+
+function handleSectionToggle(section) {
+  if (state.activeSections.has(section)) state.activeSections.delete(section);
+  else state.activeSections.add(section);
+  renderFeed();
+  const menu = $('source-search-menu');
+  const toggle = $('source-search-toggle');
+  if (menu && toggle) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
+}
+
+function renderDynamicCategoryFilters() {
+  const nav = document.querySelector('.category-filters');
+  const favorite = $('favorites-filter');
+  if (!nav || !favorite) return;
+  nav.querySelectorAll('[data-section]').forEach((node) => node.remove());
+  (FEED_TAXONOMY.sections || []).forEach((section) => {
+    const button = document.createElement('button');
+    button.className = 'filter-chip';
+    button.type = 'button';
+    button.dataset.section = section;
+    button.textContent = FEED_TAXONOMY.displaySections[section] || section;
+    button.addEventListener('click', () => handleSectionToggle(section));
+    nav.insertBefore(button, favorite);
+  });
+}
+
+function renderAdminSectionOptions(selected = 'Altres') {
+  const host = $('admin-section-options');
+  if (!host) return;
+  const options = FEED_TAXONOMY.editorSections || [...(FEED_TAXONOMY.sections || []), 'Altres'];
+  host.replaceChildren();
+  options.forEach((section) => {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'admin-section';
+    input.value = section;
+    input.checked = section === selected || (!options.includes(selected) && section === options[0]);
+    input.addEventListener('change', () => renderAdminSubcategories(''));
+    label.append(input, document.createTextNode(' ' + (FEED_TAXONOMY.displaySections[section] || section)));
+    host.append(label);
+  });
+}
+
+async function loadRemoteTaxonomy() {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/feed_taxonomy_config?id=eq.default&select=config&limit=1&t=${Date.now()}`,
+      {
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Accept: 'application/json' },
+        cache: 'no-store'
+      }
+    );
+    if (!response.ok) return false;
+    const rows = await response.json();
+    const normalized = normalizeRemoteTaxonomy(Array.isArray(rows) ? rows[0]?.config : null);
+    if (!normalized) return false;
+    FEED_TAXONOMY = normalized;
+    renderDynamicCategoryFilters();
+    renderAdminSectionOptions('Altres');
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function sourceKey(item) {
@@ -467,8 +557,7 @@ function setRadio(name, value, fallback) {
 }
 
 function selectedAdminSection() {
-  const selected = selectedRadio('admin-section', 'General');
-  return selected === 'General' ? 'Altres' : selected;
+  return selectedRadio('admin-section', 'Altres');
 }
 
 function renderAdminSubcategories(selected = '') {
@@ -501,7 +590,7 @@ function resetAdminPublishForm() {
   $('admin-title-input').value = '';
   $('admin-source').value = '';
   $('admin-context').value = '';
-  setRadio('admin-section', 'General', 'General');
+  setRadio('admin-section', 'Altres', 'Altres');
   setRadio('admin-importance', 'Normal', 'Normal');
   renderAdminSubcategories('');
   $('admin-title').textContent = 'Mode administrador';
@@ -518,7 +607,7 @@ function fillAdminEditForm(item) {
   $('admin-title-input').value = item.title || '';
   $('admin-source').value = item.source || '';
   $('admin-context').value = item.context || '';
-  setRadio('admin-section', item.section === 'Altres' ? 'General' : item.section, 'General');
+  setRadio('admin-section', item.section || 'Altres', 'Altres');
   setRadio('admin-importance', item.importance || 'Normal', 'Normal');
   renderAdminSubcategories(standardSubcategory(item));
   $('admin-title').textContent = 'Edita la notícia';
@@ -632,8 +721,7 @@ function buildAdminPayload() {
   const title = $('admin-title-input').value.trim();
   const source = $('admin-source').value.trim() || 'Afegit manualment';
   const context = $('admin-context').value.trim();
-  const selectedSection = selectedRadio('admin-section', 'General');
-  const section = selectedSection === 'General' ? 'Altres' : selectedSection;
+  const section = selectedRadio('admin-section', 'Altres');
   const rawSubcategory = selectedRadio('admin-subcategory', '');
   const tag = canonicalSubcategory(section, rawSubcategory);
   const importance = selectedRadio('admin-importance', 'Normal');
@@ -834,15 +922,7 @@ async function adminRetire() {
 }
 
 document.querySelectorAll('[data-section]').forEach((button) => {
-  button.addEventListener('click', () => {
-    const section = button.dataset.section;
-    if (state.activeSections.has(section)) state.activeSections.delete(section);
-    else state.activeSections.add(section);
-    renderFeed();
-    const menu = $('source-search-menu');
-    const toggle = $('source-search-toggle');
-    if (menu && toggle) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
-  });
+  button.addEventListener('click', () => handleSectionToggle(button.dataset.section));
 });
 
 $('favorites-filter')?.addEventListener('click', () => {
@@ -919,5 +999,9 @@ adminTrigger.addEventListener('pointerdown', () => {
 });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => adminTrigger.addEventListener(eventName, cancelAdminPress));
 
-loadLatest();
-loadFeed();
+async function bootstrap() {
+  await loadRemoteTaxonomy();
+  loadLatest();
+  loadFeed();
+}
+bootstrap();
