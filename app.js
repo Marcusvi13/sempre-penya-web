@@ -204,7 +204,7 @@ function standardSubcategory(item) {
   }
   if(item.section==='Media'){
     if(has('entrevista','interview')) return 'Entrevista';
-    if(['podcast','audio'].includes(normalizeText(item.type)) || has('podcast','audio','ivoox')) return 'Podcast';
+    if(['podcast','audio'].includes(normalizeText(item.type)) || has('podcast','audio','ivoox')) return 'Àudio';
     if(has('resum del partit','resum partit') || (has('resum') && has('partit','joventut'))) return 'Resum del partit';
     if(has('highlights','highlight','top 5','top5','millors jugades')) return 'Highlights general';
     if(has('post partit','postpartit','roda de premsa','despres del partit')) return 'Post-partit';
