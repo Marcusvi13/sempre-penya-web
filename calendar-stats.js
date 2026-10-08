@@ -15,7 +15,7 @@
     ['2026-09-19','19/09/2026 · 18:00','Supercopa Endesa · Semifinal','Asisa Joventut – Kosner Baskonia','',false,''],
     ['2026-09-20','20/09/2026 · 19:00','Supercopa Endesa · Final','Asisa Joventut – Barça','',false,''],
     ['2026-09-27','27/09/2026 · 12:00','Liga Endesa · J1','Río Breogán – Asisa Joventut','',false,''],
-    ['2026-10-03','03/10/2026 · 18:00','Liga Endesa · J2','Asisa Joventut – MoraBanc Andorra','',false,''],
+    ['2026-10-14','14/10/2026 · 20:00','Liga Endesa · J2','Asisa Joventut – MoraBanc Andorra','',false,''],
     ['2026-10-06','06/10/2026','BCL · Grup H · J1','Asisa Joventut – Bnei Penlink Herzliya','',false,''],
     ['2026-10-11','11/10/2026 · 17:00','Liga Endesa · J3','Kosner Baskonia – Asisa Joventut','',false,''],
     ['2026-10-18','18/10/2026 · 19:00','Liga Endesa · J4','Asisa Joventut – Barça','',false,''],
@@ -113,7 +113,8 @@
   }
 
   function gameDay(game) {
-    return game.key.slice(0, 10);
+    // game_key és estable (data original); game_date és la data real, també en ajornaments.
+    return String(game.gameDate || game.key || '').slice(0, 10);
   }
 
   function injectUi() {
@@ -233,11 +234,12 @@
       }
     }
 
-    const games = remoteRows !== null
+    const games = (remoteRows !== null
       ? remoteRows
           .filter((row) => row.visible !== false)
           .map((row) => ({
             key: String(row.game_key || ''),
+            gameDate: String(row.game_date || row.game_key || '').slice(0, 10),
             date: String(row.date_text || row.game_date || ''),
             competition: String(row.competition || ''),
             matchup: String(row.matchup || ''),
@@ -247,8 +249,8 @@
             sortOrder: Number(row.sort_order || 0)
           }))
           .filter((game) => game.key && game.date && game.matchup)
-          .sort((x, y) => (x.sortOrder - y.sortOrder) || x.key.localeCompare(y.key))
-      : seasonGames.map((game, index) => ({ ...game, sortOrder: index }));
+      : seasonGames.map((game, index) => ({ ...game, sortOrder: index })))
+      .sort((x, y) => gameDay(x).localeCompare(gameDay(y)) || (x.sortOrder - y.sortOrder) || x.key.localeCompare(y.key));
 
     const today = localDateKey();
     const future = games.filter((game) => !game.played && gameDay(game) >= today);
