@@ -10,6 +10,7 @@ const state = {
   items: [],
   activeSections: new Set(),
   favoritesOnly: false,
+  statisticsOnly: false,
   sourceKey: null,
   favorites: loadFavorites(),
   loading: false
@@ -128,6 +129,7 @@ function normalizeRemoteTaxonomy(config) {
 }
 
 function handleSectionToggle(section) {
+  state.statisticsOnly = false;
   if (state.activeSections.has(section)) state.activeSections.delete(section);
   else state.activeSections.add(section);
   renderFeed();
@@ -208,7 +210,8 @@ function visibleItems() {
     const favoriteOk = !state.favoritesOnly || state.favorites.has(item.id);
     const itemSourceKey = sourceKey(item);
     const sourceOk = !state.sourceKey || itemSourceKey === state.sourceKey;
-    return sectionOk && favoriteOk && sourceOk;
+    const statisticsOk = !state.statisticsOnly || (item.section === 'Partits' && standardSubcategory(item) === 'Estadístiques');
+    return sectionOk && favoriteOk && sourceOk && statisticsOk;
   });
 }
 
@@ -436,6 +439,7 @@ function renderFeed() {
     button.classList.toggle('selected', state.activeSections.has(button.dataset.section));
   });
   $('favorites-filter')?.classList.toggle('selected', state.favoritesOnly);
+  $('statistics-filter')?.classList.toggle('selected', state.statisticsOnly);
   renderSourceFilters();
 }
 
@@ -925,7 +929,19 @@ document.querySelectorAll('[data-section]').forEach((button) => {
   button.addEventListener('click', () => handleSectionToggle(button.dataset.section));
 });
 
+$('statistics-filter')?.addEventListener('click', () => {
+  const enabling = !state.statisticsOnly;
+  state.statisticsOnly = enabling;
+  if (enabling) {
+    state.activeSections.clear();
+    state.favoritesOnly = false;
+    state.sourceKey = null;
+  }
+  renderFeed();
+});
+
 $('favorites-filter')?.addEventListener('click', () => {
+  state.statisticsOnly = false;
   state.favoritesOnly = !state.favoritesOnly;
   renderFeed();
 });
