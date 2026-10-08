@@ -37,7 +37,7 @@ jobs:
           grep -q 'data-section="Mercat"' index.html
           grep -q 'data-section="Lesions"' index.html
           grep -q 'id="favorites-filter"' index.html
-          grep -q 'id="source-search-toggle"' index.html
+          grep -q 'id="statistics-filter"' index.html
           ! grep -q 'data-section="Tots"' index.html
           ! grep -q 'data-section="Favorits"' index.html
           ! grep -q 'admin-tag' index.html
@@ -48,7 +48,7 @@ jobs:
           grep -q 'Estadístiques' feed-taxonomy.js
           grep -q 'Resum del partit' feed-taxonomy.js
           grep -q 'Highlights general' feed-taxonomy.js
-          grep -q 'Podcast' feed-taxonomy.js
+          grep -q 'Àudio' feed-taxonomy.js
           grep -q 'Vídeo' feed-taxonomy.js
           grep -q 'Fitxatge' feed-taxonomy.js
           grep -q 'No segueix' feed-taxonomy.js
@@ -56,6 +56,8 @@ jobs:
           grep -q 'media_links,content_group' app.js
           grep -q 'activeSections' app.js
           grep -q 'favoritesOnly' app.js
+          grep -q 'statisticsOnly' app.js
+          grep -q "standardSubcategory(item) === 'Estadístiques'" app.js
 
       - name: Comprova capçalera i estadístiques
         run: |
