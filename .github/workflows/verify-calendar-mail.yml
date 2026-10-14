@@ -38,6 +38,15 @@ jobs:
           assert 'method:"POST"' in scripts[0]
           assert 'history.replaceState' in scripts[0]
           assert 'action' in scripts[0]
+          # La confirmació s'ha de veure al footer fix del mòbil,
+          # no només al missatge superior fora de pantalla.
+          assert 'id="saveFeedback"' in text
+          assert 'role="status" aria-live="polite"' in text
+          assert 'setFeedback("✓ "+success,"success")' in scripts[0]
+          assert 'setFeedback("Desant… "' in scripts[0]
+          assert 'finally{' in scripts[0] and 'saving=false;' in scripts[0]
+          assert 'if(saving)return;' in scripts[0]
+          assert 'if(!accepted)throw Error' in scripts[0]
           PY
           node --check /tmp/sempre-review.js
 
