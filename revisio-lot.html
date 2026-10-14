@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Revisió ràpida · Sempre Penya</title>
+<style>
+:root{font-family:system-ui,-apple-system,Arial,sans-serif;color:#182820;background:#f1f4f2}
+*{box-sizing:border-box}body{margin:0}main{max-width:840px;margin:0 auto;padding:16px}
+header{background:#086735;color:white;border-radius:16px;padding:22px;margin-bottom:14px}
+h1{font-size:1.55rem;margin:4px 0 8px}h2{font-size:1.02rem;line-height:1.4;margin:6px 0}
+header p{margin:0;opacity:.9;font-size:.9rem}p{line-height:1.5}
+.card{background:white;padding:17px;border-radius:12px;border:1px solid #dce5df;margin:12px 0}
+.meta{font-size:.82rem;color:#5b6b61}.why{font-size:.87rem;color:#475a50;background:#f4f7f4;padding:9px 11px;border-radius:8px}
+.choice{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 6px}
+.choice label{display:flex;gap:6px;align-items:center;background:#edf3ef;border:1px solid #d4e2d8;border-radius:9px;padding:9px;cursor:pointer;flex:1;min-width:115px}
+.choice label:has(input:checked){background:#e0f0e6;border-color:#086735}
+.choice label:last-child:has(input:checked){background:#f5e8e8;border-color:#9b4b4b}
+button,select,textarea{font:inherit}select,textarea{width:100%;padding:9px;border:1px solid #aebeb3;border-radius:7px;margin-top:8px}
+textarea{min-height:65px;resize:vertical}label.check{display:block;font-size:.85rem;margin-top:8px}
+small{font-size:.8rem}a{color:#086735}button{border:0;background:#086735;color:white;padding:13px 17px;border-radius:9px;font-weight:750;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+footer{position:sticky;bottom:0;background:#f1f4f2ee;border-top:1px solid #d0dbd2;padding:11px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.status{font-size:.83rem;color:#435a4b}
+.error{color:#a12121}.success{color:#086735}.done{opacity:.7}.done select,.done textarea,.done .choice{display:none}
+details{font-size:.83rem}summary{cursor:pointer;color:#245d3e}
+@media(max-width:520px){main{padding:8px}.card{padding:13px}.choice label{font-size:.83rem;min-width:100px;padding:8px}header{border-radius:9px}footer{padding:10px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<small>SEMPRE PENYA</small>
+<h1>Revisió ràpida de descartades</h1>
+<p>Decideix des d'un únic lloc sense haver d'obrir les notícies. Només es desaran les peces que marquis.</p>
+</header>
+<p id="notice" role="status" aria-live="polite">Carregant les peces del correu…</p>
+<section id="items" aria-label="Notícies per revisar"></section>
+<footer>
+<span class="status" id="counter">Sense decisions</span>
+<button id="save" disabled>Desa les decisions</button>
+</footer>
+</main>
+<script>
+"use strict";
+const endpoint="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/radar-discard-review";
+const ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const TOKEN=/^[0-9a-f]{64}$/;
+const $=id=>document.getElementById(id);
+const entries=location.hash.slice(1).split("~").map(x=>x.split(".")).filter(x=>ID.test(x[0]||"")&&TOKEN.test(x[1]||""));
+const unique=new Map(entries.map(x=>[x[0],{id:x[0],token:x[1],data:null,error:"",busy:false}]));
+const items=[...unique.values()].slice(0,25);
+history.replaceState(null,"",location.pathname);
+const reasons={
+publish:[["","Sense indicar motiu"],["relevant_first_team","Rellevant per al primer equip"],["new_information","Aporta informació nova"],["format_value","Vídeo/àudio/entrevista amb valor"],["market_followup","Mercat o rumor a seguir"],["other","Altres…"]],
+discard:[["","Sense indicar motiu"],["duplicate","Duplicada"],["prefer_canonical","Una altra font és preferible"],["irrelevant_first_team","No és del primer equip"],["low_information","Massa poca informació"],["outdated","Antiga"],["promotional","Promocional"],["youth_women_other","Cantera, femení o altre equip"],["clickbait","Clicbait"],["other","Altres…"]]
+};
+function el(tag,cls,content){const e=document.createElement(tag);if(cls)e.className=cls;if(content!=null)e.textContent=content;return e}
+function add(parent,child){parent.append(child);return child}
+function fmt(raw){if(!raw)return "Desconeguda";const v=new Date(raw);return isNaN(v.getTime())?"Desconeguda":v.toLocaleString("ca-ES",{timeZone:"Europe/Madrid",dateStyle:"short",timeStyle:"short"})}
+function pendingCount(){return document.querySelectorAll(".card:not(.done) input[value='publish']:checked,.card:not(.done) input[value='discard']:checked").length}
+function refresh(){const n=pendingCount();$("counter").textContent=n+" decisió"+(n===1?"":"ns")+" pendent"+(n===1?"":"s");$("save").disabled=!n;$("save").textContent=n?"Desa "+n+" decisió"+(n===1?"":"ns"):"Desa les decisions"}
+async function api(item,action,opts={}){const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({id:item.id,token:item.token,action,...opts})});const data=await r.json();if(!r.ok||data?.error)throw Error(data?.error||"Error de connexió");return data}
+function build(item,i){
+ const d=item.data,card=el("article","card");card.dataset.id=item.id;
+ const meta=add(card,el("div","meta",(i+1)+" / "+items.length+" · "+(d.source||"Font desconeguda")));
+ add(card,el("h2","",d.title||"Peça sense titular"));
+ add(card,el("p","meta","Publicada: "+fmt(d.published_at)+" · Detectada: "+fmt(d.first_detected_at)));
+ if(d.context)add(card,el("p","",d.context));
+ add(card,el("p","why","Motiu automàtic: "+(d.reason||"No detallat")));
+ const related=el("p","meta");
+ if(/^https?:\/\//.test(d.url||"")){const link=add(related,el("a","","Original (opcional)"));link.href=d.url;link.target="_blank";link.rel="noopener noreferrer";}
+ add(card,related);
+ const existing=Array.isArray(d.matches)?d.matches:[];
+ if(existing.length){const det=add(card,el("details",""));add(det,el("summary","",existing.length+" coincidència/es al feed. Revisa-les abans de publicar."));existing.slice(0,7).forEach(x=>add(det,el("p","meta",(x.title||"")+(x.published?" (visible)":" (oculta)"))));}
+ const already=d.status!=="pending";
+ if(already){card.classList.add("done");add(card,el("p","success","Ja revisada: "+d.status));return card;}
+ const choices=add(card,el("div","choice"));choices.setAttribute("role","group");
+ const radios=[];
+ for(const [value,label] of [["","Omet"],["publish","Publica"],["discard","Descarta"]]){
+  const w=add(choices,el("label",""));const radio=add(w,el("input",""));radio.type="radio";radio.name="decision-"+i;radio.value=value;radio.checked=value==="";add(w,el("span","",label));radios.push(radio);
+ }
+ const reason=add(card,el("select",""));reason.hidden=true;
+ const other=add(card,el("textarea",""));other.hidden=true;other.maxLength=1000;other.placeholder="Explica breument el motiu";
+ const confWrap=add(card,el("label","check"));confWrap.hidden=true;
+ const conf=add(confWrap,el("input",""));conf.type="checkbox";add(confWrap,el("span",""," Confirmo que he revisat les coincidències i vull publicar igualment."));
+ const status=add(card,el("p","status"));status.setAttribute("role","status");
+ function change(){
+  const action=radios.find(x=>x.checked)?.value||"";
+  reason.hidden=!action;reason.replaceChildren();
+  for(const [code,label] of reasons[action]||[]){const option=new Option(label,code);reason.add(option);}
+  other.hidden=true;
+  confWrap.hidden=action!=="publish"||!existing.length;
+  if(action!=="publish")conf.checked=false;
+  refresh();
+ }
+ radios.forEach(r=>r.addEventListener("change",change));
+ reason.addEventListener("change",()=>{other.hidden=reason.value!=="other"});
+ card._payload=()=>({
+  action:radios.find(x=>x.checked)?.value||"",
+  reason_code:reason.value||"",
+  reason_text:other.value.trim(),
+  confirm:conf.checked
+ });
+ card._status=status;
+ return card;
+}
+async function load(){
+ if(!items.length){$("notice").textContent="No hem trobat cap identificador vàlid. Obre el botó «Revisa totes» del correu.";return}
+ const results=await Promise.all(items.map(async item=>{try{item.data=await api(item,"read")}catch(e){item.error=String(e.message||e)}return item}));
+ $("items").replaceChildren();
+ let ok=0;
+ for(let i=0;i<results.length;i++){const item=results[i];if(item.data){add($("items"),build(item,i));ok++}else{const box=add($("items"),el("div","card"));add(box,el("p","error","Peça "+(i+1)+": "+item.error));}}
+ $("notice").textContent=ok+" peces carregades · les decisions no s'apliquen fins que prems «Desa».";
+ refresh();
+}
+$("save").onclick=async()=>{
+ const changes=[...document.querySelectorAll(".card")].filter(c=>c._payload&&c._payload().action);
+ if(!changes.length)return;
+ $("save").disabled=true;
+ let done=0,errors=0;
+ for(const card of changes){
+  const item=unique.get(card.dataset.id),p=card._payload();
+  if(p.reason_code==="other"&&!p.reason_text){card._status.textContent="Cal explicar el motiu personalitzat.";card._status.className="error";errors++;continue;}
+  if(p.action==="publish"&&item.data.matches?.length&&!p.confirm){card._status.textContent="Confirma les coincidències per publicar.";card._status.className="error";errors++;continue;}
+  try{
+   const d=await api(item,p.action,p);
+   if(d.needs_confirmation){card._status.textContent="Cal revisar les coincidències.";card._status.className="error";errors++;continue;}
+   card.classList.add("done");card._status.textContent="Desat: "+d.status;card._status.className="success";done++;
+  }catch(e){card._status.textContent="No desat: "+String(e.message||e);card._status.className="error";errors++;}
+ }
+ $("notice").textContent=done+" decisions aplicades; "+errors+" pendents d'esmenar.";
+ refresh();
+};
+load();
+</script>
+</body></html>
