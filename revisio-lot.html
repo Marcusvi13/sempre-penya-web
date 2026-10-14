@@ -51,6 +51,7 @@ details{font-size:.83rem}summary{cursor:pointer;color:#245d3e}
 <button id="save" disabled>Desa les decisions</button>
 </footer>
 </main>
+<script src="editorial-reasons.js?v=1"></script>
 <script>
 "use strict";
 const endpoint="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/radar-discard-review";
@@ -64,10 +65,7 @@ const unique=new Map(entries.map(x=>[x[0],{id:x[0],token:x[1],data:null,error:""
 const items=[...unique.values()].slice(0,25);
 let saving=false,allSaved=false;
 history.replaceState(null,"",location.pathname+location.search);
-const reasons={
-publish:[["","Sense indicar motiu"],["relevant_first_team","Rellevant per al primer equip"],["new_information","Aporta informació nova"],["format_value","Vídeo/àudio/entrevista amb valor"],["market_followup","Mercat o rumor a seguir"],["other","Altres…"]],
-discard:[["","Sense indicar motiu"],["duplicate","Duplicada"],["prefer_canonical","Una altra font és preferible"],["irrelevant_first_team","No és del primer equip"],["low_information","Massa poca informació"],["outdated","Antiga"],["promotional","Promocional"],["youth_women_other","Cantera, femení o altre equip"],["clickbait","Clicbait"],["other","Altres…"]]
-};
+const reasons=window.PENYA_EDITORIAL_REASONS;
 function el(tag,cls,content){const e=document.createElement(tag);if(cls)e.className=cls;if(content!=null)e.textContent=content;return e}
 function add(parent,child){parent.append(child);return child}
 function fmt(raw){if(!raw)return "Desconeguda";const v=new Date(raw);return isNaN(v.getTime())?"Desconeguda":v.toLocaleString("ca-ES",{timeZone:"Europe/Madrid",dateStyle:"short",timeStyle:"short"})}
@@ -103,7 +101,7 @@ function build(item,i){
  for(const [value,label] of [["","Omet"],["publish","Publica"],["discard","Descarta"]]){
   const w=add(choices,el("label",""));const radio=add(w,el("input",""));radio.type="radio";radio.name="decision-"+i;radio.value=value;radio.checked=value==="";add(w,el("span","",label));radios.push(radio);
  }
- const reason=add(card,el("select",""));reason.hidden=true;
+ const reason=add(card,el("select",""));reason.hidden=true;reason.required=true;
  const other=add(card,el("textarea",""));other.hidden=true;other.maxLength=1000;other.placeholder="Explica breument el motiu";
  const confWrap=add(card,el("label","check"));confWrap.hidden=true;
  const conf=add(confWrap,el("input",""));conf.type="checkbox";add(confWrap,el("span",""," Confirmo que he revisat les coincidències i vull publicar igualment."));
@@ -112,6 +110,7 @@ function build(item,i){
   if(!saving){allSaved=false;setFeedback("");}
   const action=radios.find(x=>x.checked)?.value||"";
   reason.hidden=!action;reason.replaceChildren();
+  if(action)reason.add(new Option("Tria un motiu…",""));
   for(const [code,label] of reasons[action]||[]){const option=new Option(label,code);reason.add(option);}
   other.hidden=true;
   confWrap.hidden=action!=="publish"||!existing.length;
@@ -152,7 +151,8 @@ $("save").onclick=async()=>{
   for(let i=0;i<changes.length;i++){
    const card=changes[i],item=unique.get(card.dataset.id),p=card._payload();
    setFeedback("Desant… "+(i+1)+" de "+changes.length+" · "+done+" confirmades","busy");
-   if(p.reason_code==="other"&&!p.reason_text){card._status.textContent="Cal explicar el motiu personalitzat.";card._status.className="error";errors++;continue;}
+   if(!p.reason_code){card._status.textContent="Tria un motiu abans de desar.";card._status.className="error";errors++;continue;}
+    if(p.reason_code==="other"&&!p.reason_text){card._status.textContent="Cal explicar el motiu personalitzat.";card._status.className="error";errors++;continue;}
    if(p.action==="publish"&&item.data.matches?.length&&!p.confirm){card._status.textContent="Confirma les coincidències per publicar.";card._status.className="error";errors++;continue;}
    try{
     const d=await api(item,p.action,p);
