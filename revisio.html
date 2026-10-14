@@ -35,13 +35,13 @@ button.secondary{background:#e7ece8;color:#182820}button.danger{background:#8f2f
 </div>
 <div class="field">
 <label for="reasonText" id="reasonTextLabel">Comentari opcional</label>
-<textarea id="reasonText" maxlength="1000" placeholder="Pots afegir context perquè el radar aprengui millor."></textarea>
+<textarea id="reasonText" maxlength="1000" placeholder="Pots afegir context per justificar i documentar la decisió."></textarea>
 </div>
 <div><button id="saveDecision">Desa la decisió</button><button id="cancelDecision" class="secondary">Cancel·la</button></div>
 </section>
 
 <p id="savedReason" hidden></p>
-<p class="note">La decisió s’aplica a aquesta peça. Els motius editorials alimenten l’aprenentatge progressiu; els motius tècnics com duplicat, peça antiga o font canònica queden registrats però no penalitzen cap tipus de notícia.</p>
+<p class="note">La decisió s’aplica a aquesta peça. Les decisions i els motius queden desats com a historial editorial. L'aprenentatge automàtic per categories i etiquetes està desactivat; la decisió afecta només aquesta peça.</p>
 </main><script>
 const endpoint="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/radar-discard-review";
 const [reviewId,token,directAction]=location.hash.slice(1).split(".");
@@ -107,7 +107,7 @@ function openDecision(action){
  $("decisionTitle").textContent=action==="publish"?"Per què la vols publicar?":"Per què la mantens descartada?";
  $("decisionHelp").textContent=action==="publish"
    ?"Aquest motiu ens ajuda a entendre quins tipus de peces sí vols al feed."
-   :"Els motius tècnics no penalitzen el tipus de notícia; els editorials sí que alimenten l’aprenentatge progressiu.";
+   :"Les decisions queden registrades sense activar filtres automàtics per categoria o etiqueta.";
  $("saveDecision").textContent=action==="publish"?"Confirma la publicació":"Confirma el descart";
  $("saveDecision").className=action==="publish"?"":"danger";
  updateReasonTextRequirement();
@@ -120,7 +120,7 @@ function updateReasonTextRequirement(){
  $("reasonTextLabel").textContent=other?"Explica breument el motiu *":"Comentari opcional";
  $("reasonText").placeholder=other
    ?"Escriu el motiu que no encaixa amb les opcions anteriors."
-   :"Pots afegir context perquè el radar aprengui millor.";
+   :"Pots afegir context per justificar i documentar la decisió.";
 }
 
 async function call(action,{reasonCode="",reasonText=""}={}){
