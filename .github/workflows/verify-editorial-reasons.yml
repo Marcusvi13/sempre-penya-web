@@ -1,0 +1,48 @@
+name: Verify shared editorial reasons
+
+on:
+  push:
+    paths:
+      - 'editorial-reasons.js'
+      - 'app.js'
+      - 'index.html'
+      - 'revisio.html'
+      - 'revisio-lot.html'
+      - '.github/workflows/verify-editorial-reasons.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and one shared catalog for every editor
+        run: |
+          node --check editorial-reasons.js
+          node --check app.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+
+          catalog=Path('editorial-reasons.js').read_text()
+          assert 'PENYA_EDITORIAL_REASONS' in catalog
+          for code in ('duplicate','prefer_canonical','outdated','irrelevant_first_team','peripheral','low_information','promotional','youth_women_other','clickbait','other'):
+              assert f'["{code}",' in catalog, f'missing shared code {code}'
+          for page in ('index.html','revisio.html','revisio-lot.html'):
+              html=Path(page).read_text()
+              assert 'editorial-reasons.js?v=1' in html, f'{page} missing shared catalog'
+              assert 'const reasons={' not in html, f'{page} contains a divergent reason catalog'
+              tags=re.findall(r'<script(?:\s+[^>]*?)?>([\s\S]*?)</script>',html)
+              for n,script in enumerate(tags):
+                  if not script.strip():continue
+                  with tempfile.NamedTemporaryFile(suffix='.js',mode='w',encoding='utf-8') as file:
+                      file.write(script);file.flush()
+                      subprocess.run(['node','--check',file.name],check=True,capture_output=True)
+          assert 'PENYA_EDITORIAL_REASONS?.discard' in Path('app.js').read_text()
+          assert 'if(!p.reason_code)' in Path('revisio-lot.html').read_text(), 'batch review must demand a reason'
+          print('Shared reasons present in the feed and both email review flows; scripts parse cleanly')
+          PY
