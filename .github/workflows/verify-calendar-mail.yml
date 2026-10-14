@@ -11,6 +11,7 @@ on:
       - 'calendar-stats.css'
       - 'header-layout.css'
       - 'index.html'
+      - 'revisio-lot.html'
       - '.github/workflows/verify-calendar-mail.yml'
   workflow_dispatch:
 
@@ -27,6 +28,18 @@ jobs:
           node --check app.js
           node --check feed-taxonomy.js
           node --check calendar-stats.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('revisio-lot.html').read_text()
+          scripts=re.findall(r'<script>(.*?)</script>',text,flags=re.S)
+          assert len(scripts)==1, 'Un únic script de revisió sense llibreries externes'
+          Path('/tmp/sempre-review.js').write_text(scripts[0])
+          assert 'method:"POST"' in scripts[0]
+          assert 'history.replaceState' in scripts[0]
+          assert 'action' in scripts[0]
+          PY
+          node --check /tmp/sempre-review.js
 
       - name: Comprova paritat visual i taxonomia v58
         run: |
