@@ -972,6 +972,18 @@ $('admin-close').addEventListener('click', closeAdminModal);
 $('admin-login').addEventListener('click', adminLogin);
 $('admin-publish').addEventListener('click', adminPublishOrSave);
 $('admin-retire').addEventListener('click', adminRetire);
+// Catàleg compartit amb les revisions dels correus: mateix codi i mateixa etiqueta.
+const editorialChoices = window.PENYA_EDITORIAL_REASONS?.discard;
+if (!Array.isArray(editorialChoices) || !editorialChoices.length) {
+  // No permetem decisions amb un motiu incomplet si falla la càrrega.
+  $('reject-save').disabled = true;
+  $('reject-reason').replaceChildren(new Option('No es poden carregar els motius; actualitza la pàgina', ''));
+} else {
+  $('reject-reason').replaceChildren(
+    new Option('Tria un motiu…', ''),
+    ...editorialChoices.map(([code, label]) => new Option(label, code))
+  );
+}
 $('reject-reason').addEventListener('change', updateRejectCommentRequirement);
 $('reject-save').addEventListener('click', saveRejectReason);
 $('reject-cancel').addEventListener('click', closeRejectModal);
