@@ -42,33 +42,14 @@ button.secondary{background:#e7ece8;color:#182820}button.danger{background:#8f2f
 
 <p id="savedReason" hidden></p>
 <p class="note">La decisió s’aplica a aquesta peça. Les decisions i els motius queden desats com a historial editorial. L'aprenentatge automàtic per categories i etiquetes està desactivat; la decisió afecta només aquesta peça.</p>
-</main><script>
+</main><script src="editorial-reasons.js?v=1"></script><script>
 const endpoint="https://busuaaaamcojjtavhrne.supabase.co/functions/v1/radar-discard-review";
 const [reviewId,token,directAction]=location.hash.slice(1).split(".");
 const $=id=>document.getElementById(id);
 let current=null;
 let pendingAction=null;
 
-const reasons={
- publish:[
-  ["relevant_first_team","És rellevant per al primer equip"],
-  ["new_information","Aporta informació nova o actualitzada"],
-  ["format_value","El format aporta valor propi (vídeo, àudio, entrevista…)"],
-  ["market_followup","És mercat/rumor i vull seguir-lo"],
-  ["other","Un altre motiu…"]
- ],
- discard:[
-  ["duplicate","Duplicada / ja tenim la mateixa informació"],
-  ["prefer_canonical","Prefereixo la peça canònica o una altra font"],
-  ["outdated","Massa antiga / fora de finestra"],
-  ["irrelevant_first_team","No és rellevant per al primer equip"],
-  ["low_information","Aporta massa poca informació"],
-  ["promotional","És massa promocional"],
-  ["youth_women_other","És cantera, femení o un altre equip"],
-  ["clickbait","Titular/clicbait sense prou contingut"],
-  ["other","Un altre motiu…"]
- ]
-};
+const reasons=window.PENYA_EDITORIAL_REASONS;
 const labels=Object.fromEntries([...reasons.publish,...reasons.discard]);
 
 function date(value){return value?new Date(value).toLocaleString("ca-ES",{timeZone:"Europe/Madrid"}):"Desconeguda"}
