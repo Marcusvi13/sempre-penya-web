@@ -319,7 +319,15 @@ function taxonomyLabel(item) {
 
 function mediaLinks(item) {
   const links=[];
-  const normalizeKind=(value)=>{ const kind=normalizeText(value); if(['audio','podcast','escoltar'].includes(kind)) return 'audio'; if(['video','youtube'].includes(kind)) return 'video'; if(['read','article','web','llegir'].includes(kind)) return 'read'; return null; };
+  const normalizeKind=(value)=>{
+    const kind=normalizeText(value);
+    if(['audio','podcast','escoltar'].includes(kind)) return 'audio';
+    if(['video','youtube'].includes(kind)) return 'video';
+    if(['read','article','web','llegir'].includes(kind)) return 'read';
+    if(['x','twitter','tweet'].includes(kind)) return 'x';
+    if(['instagram','ig'].includes(kind)) return 'instagram';
+    return null;
+  };
   (Array.isArray(item.media_links) ? item.media_links : []).forEach((entry)=>{
     const kind=normalizeKind(entry && entry.kind);
     const url=safeUrl((entry && entry.url) || '');
@@ -330,7 +338,7 @@ function mediaLinks(item) {
     const type=normalizeText(item.type);
     links.push({kind:['podcast','audio'].includes(type)?'audio':(type==='video'?'video':'read'),url:primary});
   }
-  const order={read:0,audio:1,video:2};
+  const order={read:0,audio:1,video:2,x:3,instagram:4};
   const seen=new Set();
   return links.filter((entry)=>{ const key=entry.url.replace(/\/+$/,'').toLowerCase(); if(seen.has(key)) return false; seen.add(key); return true; }).sort((x,y)=>(order[x.kind]??9)-(order[y.kind]??9));
 }
@@ -338,6 +346,8 @@ function mediaLinks(item) {
 function mediaActionLabel(link) {
   if(link.kind==='audio') return '🎧 Escoltar →';
   if(link.kind==='video') return '▶ Veure vídeo →';
+  if(link.kind==='x') return '𝕏 X →';
+  if(link.kind==='instagram') return 'Instagram →';
   return 'Llegir →';
 }
 
