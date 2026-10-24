@@ -480,7 +480,7 @@ async function loadFeed() {
   });
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?${params.toString()}`, {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/news?${params.toString()}`, {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
         Accept: 'application/json'
