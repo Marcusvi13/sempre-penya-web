@@ -1,0 +1,24 @@
+name: Verifica botons socials X i Instagram (sense desplegar)
+on:
+  push:
+    branches: [fix/v66-social-links-staging-20261024]
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'index.html'
+      - 'tests/test-social-media-links.cjs'
+      - '.github/workflows/verify-social-media-links.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regressions de multimèdia existent i X/Instagram
+        run: |
+          node --check app.js
+          node --test tests/test-admin-importance-save.cjs tests/test-social-media-links.cjs
