@@ -480,7 +480,7 @@ async function loadFeed() {
   });
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/news?${params.toString()}`, {
+    const response = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/news?${params.toString()}`, {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
         Accept: 'application/json'
@@ -737,6 +737,23 @@ function buildAdminPayload() {
   };
 }
 
+// Cap edició pot deixar indefinidament el botó en estat "Desant…"
+// per una petició de xarxa encallada, fins i tot si Supabase ja ha escrit.
+async function fetchWithTimeout(url, options = {}, timeoutMs = 18000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error('Temps d’espera esgotat. Comprova si el canvi s’ha desat abans de tornar-ho a provar.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function adminPublishOrSave() {
   const button = $('admin-publish');
   setFormMessage('admin-publish-error', '');
@@ -768,7 +785,7 @@ async function adminPublishOrSave() {
     let body = payload;
 
     if (editing) {
-      endpoint += `?id=eq.${encodeURIComponent(adminEditor.itemId)}`;
+      endpoint += `?id=eq.${encodeURIComponent(adminEditor.itemId)}&select=id,importance`;
       method = 'PATCH';
     } else {
       const now = new Date().toISOString();
@@ -783,11 +800,11 @@ async function adminPublishOrSave() {
       };
     }
 
-    const response = await fetch(endpoint, {
+    const response = await fetchWithTimeout(endpoint, {
       method,
       headers: {
         ...adminHeaders(adminSession.token),
-        Prefer: 'return=minimal'
+        Prefer: editing ? 'return=representation' : 'return=minimal'
       },
       body: JSON.stringify(body)
     });
@@ -802,12 +819,31 @@ async function adminPublishOrSave() {
       throw new Error(data.message || data.details || `No s’ha pogut desar (HTTP ${response.status})`);
     }
 
+    // Amb return=minimal, PostgREST pot donar 204 tot i no haver modificat
+    // cap fila. Per a les edicions exigim una fila retornada, amb la
+    // importància confirmada, abans de comunicar èxit.
+    if (editing) {
+      const saved = await response.json().catch(() => []);
+      const match = Array.isArray(saved) && saved.length === 1 && saved[0]?.id === adminEditor.itemId;
+      if (!match || saved[0].importance !== payload.importance) {
+        throw new Error('No s’ha pogut confirmar el canvi. Recarrega la notícia abans de reintentar-ho.');
+      }
+      // Refresquem el valor visible immediatament; la resta del feed pot
+      // tornar a carregar-se després, sense bloquejar la resposta a l'usuari.
+      state.items = state.items.map((item) =>
+        item.id === adminEditor.itemId ? { ...item, ...payload } : item
+      );
+      renderFeed();
+    }
+
     const message = editing
-      ? 'Canvis desats. Android i web llegiran aquesta mateixa versió.'
+      ? 'Canvis desats i confirmats. Android i web llegiran aquesta mateixa versió.'
       : 'Publicada. Ja forma part del mateix feed que consulta Android.';
     resetAdminPublishForm();
     setFormMessage('admin-publish-ok', message);
-    await loadFeed();
+    // Una recàrrega de 500+ fitxes pot ser lenta o fallar: no pot mantenir
+    // el botó de desar bloquejat després que el PATCH ja s'ha confirmat.
+    void loadFeed();
   } catch (error) {
     setFormMessage('admin-publish-error', error.message || 'No s’ha pogut desar.');
   } finally {
