@@ -22,7 +22,7 @@ button.secondary{background:#e7ece8;color:#182820}button.danger{background:#8f2f
 <p><a id="article" target="_blank" rel="noopener noreferrer">Obre la font original</a></p>
 <p class="reason" id="reason"></p>
 <div id="matches" hidden><h2>Notícies que poden coincidir</h2><div id="matchlist"></div>
-<label><input id="confirm" type="checkbox"> He revisat les coincidències i vull publicar aquesta peça igualment.</label></div>
+<p class="note">Les coincidències es comproven automàticament; si hi ha una notícia diferent ja publicada, es bloquejarà el duplicat.</p></div>
 <p id="state" role="status"></p><p id="error" role="alert"></p>
 <div id="actions" hidden><button id="publish">Publica-la</button><button id="discard" class="secondary">Mantén descartada</button></div>
 
@@ -73,7 +73,7 @@ function render(data){
    $("savedReason").hidden=false;
    $("savedReason").textContent="Motiu desat: "+(labels[code]||code||"Altres")+(text?" — "+text:"");
  }else $("savedReason").hidden=true;
- if(data.needs_confirmation)$("error").textContent="Revisa les coincidències i marca la casella abans de publicar.";
+ if(data.needs_confirmation)$("error").textContent="No s'ha publicat: coincideix amb una notícia existent.";
 }
 
 function openDecision(action){
@@ -113,7 +113,7 @@ async function call(action,{reasonCode="",reasonText=""}={}){
      headers:{"Content-Type":"application/json"},
      body:JSON.stringify({
        id:reviewId,token,action,
-       confirm:$("confirm").checked,
+       confirm:false,
        reason_code:reasonCode,
        reason_text:reasonText
      })
@@ -123,6 +123,7 @@ async function call(action,{reasonCode="",reasonText=""}={}){
    render(data);
    if(data.needs_confirmation){
      $("decision").hidden=false;
+     $("error").textContent="No s'ha modificat el feed: publicació bloquejada per possible duplicat.";
      return;
    }
    if(data.status!=="pending") $("decision").hidden=true;

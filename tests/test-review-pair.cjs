@@ -55,4 +55,15 @@ mock.items[0].data.matches=[{...hidden,url:'https://example.com/another-post'}];
 assert.equal(check(),false,'Unrelated hidden news must require confirmation');
 mock.items[0].data.matches=[hidden,{...hidden,url:'https://example.com/other-hidden'}];
 assert.equal(check(),false,'Mixed matches must require confirmation');
+const single=fs.readFileSync(path.join(__dirname,'..','revisio.html'),'utf8');
+assert.ok(!html.includes('Confirmo que he revisat les coincidències i vull publicar igualment.'));
+assert.ok(!single.includes('He revisat les coincidències i vull publicar aquesta peça igualment.'));
+assert.ok(!single.includes('id="confirm"'));
+assert.ok(!js.includes('confirm:conf.checked'));
+assert.ok(js.includes('const check=await api(item,"probe_pair",p)'),
+  'The live pair save must run automatic transactionally rolled-back preflight');
+assert.ok(js.includes('check.ok!==true||check.dry_run!==true'),
+  'The preflight must fail closed before the real publication action');
+assert.ok(js.includes('confirm_pair:pairConfirm.checked'),
+  'The meaningful crosspost approval must remain explicit');
 console.log('OK: syntax, explicit approval, same-source crosspost, safety checks');
