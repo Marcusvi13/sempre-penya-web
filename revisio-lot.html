@@ -17,6 +17,8 @@ header p{margin:0;opacity:.9;font-size:.9rem}p{line-height:1.5}
 .pair-group{border:1px solid #accbb7;background:#f1f8f3;padding:11px;border-radius:10px;margin:12px 0}
 .pair-group .meta{margin:0 0 5px;font-weight:650}
 .pair-group select{background:#fff}
+.pair-group label.check{display:block;margin:12px 0 4px;font-weight:650}
+.pair-group[hidden]{display:none}
 .choice label{display:flex;gap:6px;align-items:center;background:#edf3ef;border:1px solid #d4e2d8;border-radius:9px;padding:9px;cursor:pointer;flex:1;min-width:115px}
 .choice label:has(input:checked){background:#e0f0e6;border-color:#086735}
 .choice label:last-child:has(input:checked){background:#f5e8e8;border-color:#9b4b4b}
@@ -99,7 +101,7 @@ function setFeedback(message,kind=""){
 }
 function refresh(){
  const n=pendingCount();
- $("counter").textContent=n+" decisió"+(n===1?"":"ns")+" pendent"+(n===1?"":"s");
+ $("counter").textContent=n ? n+" decisió"+(n===1?"":"ns")+" seleccionada"+(n===1?"":"es")+" per desar" : "Cap decisió seleccionada (Omet no desa res)";
  $("save").disabled=saving||!n;
  $("save").textContent=saving?"Desant…":n?"Desa "+n+" decisió"+(n===1?"":"ns"):allSaved?"✓ Tot desat":"Desa les decisions";
 }
@@ -120,24 +122,30 @@ function build(item,i){
  if(already){card.classList.add("done");add(card,el("p","success","Ja revisada: "+d.status));return card;}
  const choices=add(card,el("div","choice"));choices.setAttribute("role","group");
  const radios=[];
- for(const [value,label] of [["","Omet"],["publish","Publica"],["discard","Descarta"]]){
+ for(const [value,label] of [["","Omet (no modifica la proposta)"],["publish","Publica"],["discard","Descarta"]]){
   const w=add(choices,el("label",""));const radio=add(w,el("input",""));radio.type="radio";radio.name="decision-"+i;radio.value=value;radio.checked=value==="";add(w,el("span","",label));radios.push(radio);
  }
  const eligible=partnersFor(item);
  const pairWrap=add(card,el("div","pair-group"));pairWrap.hidden=true;
- add(pairWrap,el("p","meta","Agrupar amb una altra proposta del mateix compte (X + Instagram):"));
+ add(pairWrap,el("p","meta","Hi ha una publicació de l'altra xarxa pendent. Tria expressament com vols publicar:"));
  const pairSelect=add(pairWrap,el("select",""));
- pairSelect.add(new Option("No agrupar: publicar només aquesta peça",""));
+ pairSelect.add(new Option("— Tria agrupar o publicar només aquesta peça —",""));
  for(const other of eligible){
   const d=other.data;
   pairSelect.add(new Option((platform(d)==="x"?"X":"Instagram")+" · "+String(d.title||"Publicació").slice(0,90),other.id));
  }
+ pairSelect.add(new Option("Publicar NOMÉS aquesta peça (sense agrupar)","solo"));
+ const soloConfirmWrap=add(pairWrap,el("label","check"));soloConfirmWrap.hidden=true;
+ const soloConfirm=add(soloConfirmWrap,el("input",""));soloConfirm.type="checkbox";
+ add(soloConfirmWrap,el("span",""," Confirmo que vull publicar només aquesta xarxa i NO agrupar l'altra proposta."));
  const pairConfirmWrap=add(pairWrap,el("label","check"));pairConfirmWrap.hidden=true;
  const pairConfirm=add(pairConfirmWrap,el("input",""));pairConfirm.type="checkbox";
  add(pairConfirmWrap,el("span",""," Confirmo que són la mateixa notícia: publicar UNA entrada amb els botons X i Instagram. L'altra proposta quedarà resolta com a agrupada."));
  pairSelect.addEventListener("change",()=>{
   pairConfirm.checked=false;
-  pairConfirmWrap.hidden=!pairSelect.value;
+  pairConfirmWrap.hidden=!pairSelect.value||pairSelect.value==="solo";
+  soloConfirmWrap.hidden=pairSelect.value!=="solo";
+  soloConfirm.checked=false;
   allSaved=false;setFeedback("");
  });
  const reason=add(card,el("select",""));reason.hidden=true;reason.required=true;
@@ -149,7 +157,7 @@ function build(item,i){
   if(!saving){allSaved=false;setFeedback("");}
   const action=radios.find(x=>x.checked)?.value||"";
   pairWrap.hidden=action!=="publish"||!eligible.length;
-  if(action!=="publish"){pairSelect.value="";pairConfirm.checked=false;pairConfirmWrap.hidden=true;}
+  if(action!=="publish"){pairSelect.value="";pairConfirm.checked=false;soloConfirm.checked=false;pairConfirmWrap.hidden=true;soloConfirmWrap.hidden=true;}
   reason.hidden=!action;reason.replaceChildren();
   if(action)reason.add(new Option("Tria un motiu…",""));
   for(const [code,label] of reasons[action]||[]){const option=new Option(label,code);reason.add(option);}
@@ -166,9 +174,12 @@ function build(item,i){
   reason_code:reason.value||"",
   reason_text:other.value.trim(),
   confirm:conf.checked,
-  related_id:pairSelect.value||"",
-  related_token:pairSelect.value?(unique.get(pairSelect.value)?.token||""):"",
-  confirm_pair:pairConfirm.checked
+  related_id:pairSelect.value && pairSelect.value!=="solo"?pairSelect.value:"",
+  related_token:pairSelect.value && pairSelect.value!=="solo"?(unique.get(pairSelect.value)?.token||""):"",
+  confirm_pair:pairConfirm.checked,
+  pair_required:eligible.length>0,
+  pair_choice:pairSelect.value,
+  publish_solo_confirm:soloConfirm.checked
  });
  card._status=status;
  return card;
@@ -197,6 +208,14 @@ $("save").onclick=async()=>{
    setFeedback("Desant… "+(i+1)+" de "+changes.length+" · "+done+" confirmades","busy");
    if(!p.reason_code){card._status.textContent="Tria un motiu abans de desar.";card._status.className="error";errors++;continue;}
     if(p.reason_code==="other"&&!p.reason_text){card._status.textContent="Cal explicar el motiu personalitzat.";card._status.className="error";errors++;continue;}
+   if(p.action==="publish"&&p.pair_required&&!p.pair_choice){
+     card._status.textContent="Tria explícitament agrupar X i Instagram o publicar només una xarxa.";
+     card._status.className="error";errors++;continue;
+   }
+   if(p.action==="publish"&&p.pair_choice==="solo"&&!p.publish_solo_confirm){
+     card._status.textContent="Confirma que vols publicar una sola xarxa.";
+     card._status.className="error";errors++;continue;
+   }
    if(p.action==="publish"&&p.related_id){
      if(!p.confirm_pair){card._status.textContent="Confirma que les dues publicacions són la mateixa notícia.";card._status.className="error";errors++;continue;}
      const partnerCard=[...document.querySelectorAll(".card")].find(c=>c.dataset.id===p.related_id);
