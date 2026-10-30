@@ -104,6 +104,18 @@ function onlyHiddenPairMatches(item,relatedId){
  return matches.every(m=>m.published===false &&
    (m.url===a.url||m.url===b.url));
 }
+function youtubeIds(t){
+ const m=String(t||"").matchAll(/https?:\/\/(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:[^\s#]*?&)?v=|shorts\/))([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/gi);
+ return new Set([...m].map(x=>x[1]));
+}
+function verifiedCrosspost(a,b){
+ if(!a?.data||!b?.data||a.data.status!=="pending"||b.data.status!=="pending"
+    ||family(a.data)!==family(b.data)||!family(a.data)||platform(a.data)===platform(b.data))return false;
+ const x=Date.parse(a.data.published_at),y=Date.parse(b.data.published_at);
+ if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x-y)>7200000)return false;
+ const one=youtubeIds(a.data.context),two=youtubeIds(b.data.context);
+ return one.size>0&&[...one].some(id=>two.has(id));
+}
 function pendingCount(){return document.querySelectorAll(".card:not(.done) input[value='publish']:checked,.card:not(.done) input[value='discard']:checked").length}
 function setFeedback(message,kind=""){
  const box=$("saveFeedback");
@@ -123,6 +135,11 @@ function build(item,i){
  add(card,el("h2","",d.title||"Peça sense titular"));
  add(card,el("p","meta","Publicada: "+fmt(d.published_at)+" · Detectada: "+fmt(d.first_detected_at)));
  if(d.context)add(card,el("p","",d.context));
+ if(d.related_url && /^https:\/\//.test(d.related_url)){
+   const pair=add(card,el("p","meta","Parella social verificada: aquesta revisió ja inclou els dos enllaços. Publicar crearà una única notícia."));
+   const link=add(pair,el("a","","Obrir l'altra xarxa"));
+   link.href=d.related_url;link.target="_blank";link.rel="noopener noreferrer";
+ }
  add(card,el("p","why","Motiu automàtic: "+(d.reason||"No detallat")));
  const related=el("p","meta");
  if(/^https?:\/\//.test(d.url||"")){const link=add(related,el("a","","Original (opcional)"));link.href=d.url;link.target="_blank";link.rel="noopener noreferrer";}
@@ -137,8 +154,10 @@ function build(item,i){
   const w=add(choices,el("label",""));const radio=add(w,el("input",""));radio.type="radio";radio.name="decision-"+i;radio.value=value;radio.checked=value==="";add(w,el("span","",label));radios.push(radio);
  }
  const eligible=partnersFor(item);
+ const suggested=eligible.filter(other=>verifiedCrosspost(item,other));
+ const verifiedPartner=suggested.length===1?suggested[0]:null;
  const pairWrap=add(card,el("div","pair-group"));pairWrap.hidden=true;
- add(pairWrap,el("p","meta","Hi ha una publicació de l'altra xarxa pendent. Tria expressament com vols publicar:"));
+ add(pairWrap,el("p","meta",verifiedPartner?"Mateix vídeo original verificat a X i Instagram: una sola notícia amb dos botons si prems Publica i deses.":"Hi ha una publicació de l'altra xarxa pendent. Tria expressament com vols publicar:"));
  const pairSelect=add(pairWrap,el("select",""));
  pairSelect.add(new Option("— Tria agrupar o publicar només aquesta peça —",""));
  for(const other of eligible){
@@ -152,9 +171,11 @@ function build(item,i){
  const pairConfirmWrap=add(pairWrap,el("label","check"));pairConfirmWrap.hidden=true;
  const pairConfirm=add(pairConfirmWrap,el("input",""));pairConfirm.type="checkbox";
  add(pairConfirmWrap,el("span",""," Confirmo que són la mateixa notícia: publicar UNA entrada amb els botons X i Instagram. L'altra proposta quedarà resolta com a agrupada."));
+ if(verifiedPartner){pairSelect.value=verifiedPartner.id;pairConfirm.checked=true;}
  pairSelect.addEventListener("change",()=>{
-  pairConfirm.checked=false;
-  pairConfirmWrap.hidden=!pairSelect.value||pairSelect.value==="solo";
+  const auto=Boolean(verifiedPartner&&pairSelect.value===verifiedPartner.id);
+  pairConfirm.checked=auto;
+  pairConfirmWrap.hidden=auto||!pairSelect.value||pairSelect.value==="solo";
   soloConfirmWrap.hidden=pairSelect.value!=="solo";
   soloConfirm.checked=false;
   updateDuplicateConfirmation();
@@ -176,6 +197,7 @@ function build(item,i){
   if(!saving){allSaved=false;setFeedback("");}
   const action=radios.find(x=>x.checked)?.value||"";
   pairWrap.hidden=action!=="publish"||!eligible.length;
+  if(verifiedPartner&&pairSelect.value===verifiedPartner.id)pairConfirmWrap.hidden=true;
   if(action!=="publish"){pairSelect.value="";pairConfirm.checked=false;soloConfirm.checked=false;pairConfirmWrap.hidden=true;soloConfirmWrap.hidden=true;}
   reason.hidden=!action;reason.replaceChildren();
   if(action)reason.add(new Option("Tria un motiu…",""));
