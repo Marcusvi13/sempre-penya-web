@@ -243,6 +243,14 @@ $("save").onclick=async()=>{
      }
    }
    try{
+    if(p.action==="publish"&&p.related_id){
+      // The dry run executes precisely the server publication function inside
+      // a rolled-back transaction. No feed item is created by this check.
+      const check=await api(item,"probe_pair",p);
+      if(check.ok!==true||check.dry_run!==true||check.result?.paired!==true){
+        throw Error("La comprovació prèvia no ha validat l’agrupació. No s’ha publicat res. Referència: "+String(check.error_code||"revisio").slice(0,24));
+      }
+    }
     const d=await api(item,p.action==="publish"&&p.related_id?"publish_pair":p.action,p);
     if(d.needs_confirmation){card._status.textContent="No s'ha publicat: existeix una altra notícia coincident. Evitem crear duplicats.";card._status.className="error";errors++;continue;}
     // Un HTTP 200 amb estat 'pending' NO significa que s'hagi desat.
