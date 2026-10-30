@@ -37,4 +37,22 @@ const run = vm.runInNewContext(
   + '\n partnersFor(items[0]).map(x=>x.id).join(",")',mock
 );
 assert.equal(run,'ig','Only same-source fresh pending other-platform post should qualify');
+// An archived link for this exact X+Instagram pair is not a new duplicate.
+const igUrl='https://www.instagram.com/reel/DfHTS9Ho1Hh/';
+const xUrl='https://x.com/Penya1930/status/2116107860446990458';
+mock.items[0].data.url=xUrl;
+mock.items[1].data.url=igUrl;
+const hidden={id:'archived',url:igUrl,published:false};
+mock.items[0].data.matches=[hidden];
+const unique=new Map(mock.items.map(i=>[i.id,i]));
+const code=js.slice(js.indexOf('function platform(d)'),js.indexOf('function pendingCount()'));
+const check=(matches)=>vm.runInNewContext(code+'\\n onlyHiddenPairMatches(items[0],"ig")',
+  {items:mock.items,unique});
+assert.equal(check(),true,'Hidden exact pair is safe to reuse');
+mock.items[0].data.matches=[{...hidden,published:true}];
+assert.equal(check(),false,'Visible duplicate must require confirmation');
+mock.items[0].data.matches=[{...hidden,url:'https://example.com/another-post'}];
+assert.equal(check(),false,'Unrelated hidden news must require confirmation');
+mock.items[0].data.matches=[hidden,{...hidden,url:'https://example.com/other-hidden'}];
+assert.equal(check(),false,'Mixed matches must require confirmation');
 console.log('OK: syntax, explicit approval, same-source crosspost, safety checks');
