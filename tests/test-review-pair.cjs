@@ -46,7 +46,7 @@ const hidden={id:'archived',url:igUrl,published:false};
 mock.items[0].data.matches=[hidden];
 const unique=new Map(mock.items.map(i=>[i.id,i]));
 const code=js.slice(js.indexOf('function platform(d)'),js.indexOf('function pendingCount()'));
-const check=(matches)=>vm.runInNewContext(code+'\\n onlyHiddenPairMatches(items[0],"ig")',
+const check=(matches)=>vm.runInNewContext(code+'\n onlyHiddenPairMatches(items[0],"ig")',
   {items:mock.items,unique});
 assert.equal(check(),true,'Hidden exact pair is safe to reuse');
 mock.items[0].data.matches=[{...hidden,published:true}];
