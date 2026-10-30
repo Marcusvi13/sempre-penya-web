@@ -135,6 +135,11 @@ function build(item,i){
  add(card,el("h2","",d.title||"Peça sense titular"));
  add(card,el("p","meta","Publicada: "+fmt(d.published_at)+" · Detectada: "+fmt(d.first_detected_at)));
  if(d.context)add(card,el("p","",d.context));
+ if(d.related_url && /^https:\/\//.test(d.related_url)){
+   const pair=add(card,el("p","meta","Parella social verificada: aquesta revisió ja inclou els dos enllaços. Publicar crearà una única notícia."));
+   const link=add(pair,el("a","","Obrir l'altra xarxa"));
+   link.href=d.related_url;link.target="_blank";link.rel="noopener noreferrer";
+ }
  add(card,el("p","why","Motiu automàtic: "+(d.reason||"No detallat")));
  const related=el("p","meta");
  if(/^https?:\/\//.test(d.url||"")){const link=add(related,el("a","","Original (opcional)"));link.href=d.url;link.target="_blank";link.rel="noopener noreferrer";}
