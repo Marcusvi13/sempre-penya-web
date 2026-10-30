@@ -162,16 +162,14 @@ function build(item,i){
  });
  const reason=add(card,el("select",""));reason.hidden=true;reason.required=true;
  const other=add(card,el("textarea",""));other.hidden=true;other.maxLength=1000;other.placeholder="Explica breument el motiu";
- const confWrap=add(card,el("label","check"));confWrap.hidden=true;
- const conf=add(confWrap,el("input",""));conf.type="checkbox";add(confWrap,el("span",""," Confirmo que he revisat les coincidències i vull publicar igualment."));
+ add(card,el("p","meta","Les coincidències amb altres notícies es comproven automàticament: no cal cap confirmació addicional."));
  const priorHiddenInfo=add(card,el("p","meta","La coincidència detectada correspon a una d'aquestes dues peces que ja estava oculta. Es reaprofitarà en una sola notícia; no cal confirmar-la com un duplicat nou."));
  priorHiddenInfo.hidden=true;
  function updateDuplicateConfirmation(){
   const action=radios.find(x=>x.checked)?.value||"";
   const hiddenPair=action==="publish"&&onlyHiddenPairMatches(item,pairSelect.value);
   priorHiddenInfo.hidden=!hiddenPair;
-  confWrap.hidden=action!=="publish"||!existing.length||hiddenPair;
-  if(confWrap.hidden)conf.checked=false;
+  // La verificació de duplicats es fa al servidor.
  }
  const status=add(card,el("p","status"));status.setAttribute("role","status");
  function change(){
@@ -184,7 +182,7 @@ function build(item,i){
   for(const [code,label] of reasons[action]||[]){const option=new Option(label,code);reason.add(option);}
   other.hidden=true;
   updateDuplicateConfirmation();
-  if(action!=="publish")conf.checked=false;
+ 
   refresh();
  }
  radios.forEach(r=>r.addEventListener("change",change));
@@ -194,7 +192,7 @@ function build(item,i){
   action:radios.find(x=>x.checked)?.value||"",
   reason_code:reason.value||"",
   reason_text:other.value.trim(),
-  confirm:conf.checked,
+  confirm:false,
   related_id:pairSelect.value && pairSelect.value!=="solo"?pairSelect.value:"",
   related_token:pairSelect.value && pairSelect.value!=="solo"?(unique.get(pairSelect.value)?.token||""):"",
   confirm_pair:pairConfirm.checked,
@@ -244,14 +242,9 @@ $("save").onclick=async()=>{
        card._status.textContent="L'altra proposta també té una decisió marcada. Deixa-la a «Omet» per agrupar-la.";card._status.className="error";errors++;continue;
      }
    }
-   if(p.action==="publish"&&item.data.matches?.length&&!p.confirm
-       &&!onlyHiddenPairMatches(item,p.related_id)){
-     card._status.textContent="Confirma les coincidències amb altres notícies abans de publicar.";
-     card._status.className="error";errors++;continue;
-    }
    try{
     const d=await api(item,p.action==="publish"&&p.related_id?"publish_pair":p.action,p);
-    if(d.needs_confirmation){card._status.textContent="Cal revisar les coincidències.";card._status.className="error";errors++;continue;}
+    if(d.needs_confirmation){card._status.textContent="No s'ha publicat: existeix una altra notícia coincident. Evitem crear duplicats.";card._status.className="error";errors++;continue;}
     // Un HTTP 200 amb estat 'pending' NO significa que s'hagi desat.
     const accepted=p.action==="publish"
       ?["published","already_published"].includes(d.status)
