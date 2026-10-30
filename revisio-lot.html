@@ -128,7 +128,7 @@ function refresh(){
  $("save").disabled=saving||!n;
  $("save").textContent=saving?"Desant…":n?"Desa "+n+" decisió"+(n===1?"":"ns"):allSaved?"✓ Tot desat":"Desa les decisions";
 }
-async function api(item,action,opts={}){const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({id:item.id,token:item.token,action,...opts})});const data=await r.json();if(!r.ok||data?.error)throw Error(data?.error||"Error de connexió");return data}
+async function api(item,action,opts={}){const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({...opts,id:item.id,token:item.token,action})});const data=await r.json();if(!r.ok||data?.error)throw Error(data?.error||"Error de connexió");return data}
 function build(item,i){
  const d=item.data,card=el("article","card");card.dataset.id=item.id;
  const meta=add(card,el("div","meta",(i+1)+" / "+items.length+" · "+(d.source||"Font desconeguda")));
