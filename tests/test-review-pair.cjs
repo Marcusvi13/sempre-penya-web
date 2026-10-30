@@ -66,4 +66,18 @@ assert.ok(js.includes('check.ok!==true||check.dry_run!==true'),
   'The preflight must fail closed before the real publication action');
 assert.ok(js.includes('confirm_pair:pairConfirm.checked'),
   'The meaningful crosspost approval must remain explicit');
+// The specific historical Ante Tomic crosspost shares an exact verified YouTube ID.
+const xCtx="Hi ha camins que no es fan sol. Mini documental complet a https://youtu.be/C9p6a6Yrt8k amb col·laboració";
+const igCtx="Hi ha camins que no es fan sol. Mini documental complet a https://youtu.be/C9p6a6Yrt8k";
+const xa={id:"penyax",data:{source:"Club Joventut Badalona · X",status:"pending",published_at:"2026-10-30T10:00:03Z",context:xCtx}};
+const ig={id:"penyaig",data:{source:"Club Joventut Badalona · Instagram",status:"pending",published_at:"2026-10-30T09:53:36Z",context:igCtx}};
+const helper=js.slice(js.indexOf("function platform(d)"),js.indexOf("function pendingCount()"));
+const sharedVideo=new Function("a","b",helper+"return verifiedCrosspost(a,b);");
+assert.equal(sharedVideo(xa,ig),true,"Exact shared video should be preselected");
+assert.equal(sharedVideo(xa,{...ig,data:{...ig.data,context:"Un vídeo diferent"}}),false);
+assert.equal(sharedVideo(xa,{...ig,data:{...ig.data,source:"Badalona Comunicació · Instagram"}}),false);
+assert.equal(sharedVideo(xa,{...ig,data:{...ig.data,published_at:"2026-10-30T05:00:00Z"}}),false);
+assert.ok(js.includes("pairSelect.value=verifiedPartner.id"),"Verified pair must be actually selected, not just suggested");
+assert.ok(js.includes("pairConfirm.checked=true"),"Automatic verified match needs atomic paired path");
+assert.ok(js.includes("Parella social verificada"),"Already-paired single reviews should describe their other platform");
 console.log('OK: syntax, explicit approval, same-source crosspost, safety checks');
