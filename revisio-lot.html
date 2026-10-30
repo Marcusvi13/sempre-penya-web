@@ -93,6 +93,17 @@ function partnersFor(item){
     &&Number.isFinite(when)&&Math.abs(when-time)<=12*3600000;
  });
 }
+function onlyHiddenPairMatches(item,relatedId){
+ const related=unique.get(relatedId);
+ const a=item?.data,b=related?.data;
+ const matches=Array.isArray(a?.matches)?a.matches:[];
+ if(!relatedId||!a||!b||a.status!=="pending"||b.status!=="pending"||
+    !matches.length||family(a)!==family(b)||platform(a)===platform(b))return false;
+ // A prior test may have left one of THESE two URLs in the feed, hidden.
+ // Different, visible or third-party matches still demand human approval.
+ return matches.every(m=>m.published===false &&
+   (m.url===a.url||m.url===b.url));
+}
 function pendingCount(){return document.querySelectorAll(".card:not(.done) input[value='publish']:checked,.card:not(.done) input[value='discard']:checked").length}
 function setFeedback(message,kind=""){
  const box=$("saveFeedback");
@@ -146,12 +157,22 @@ function build(item,i){
   pairConfirmWrap.hidden=!pairSelect.value||pairSelect.value==="solo";
   soloConfirmWrap.hidden=pairSelect.value!=="solo";
   soloConfirm.checked=false;
+  updateDuplicateConfirmation();
   allSaved=false;setFeedback("");
  });
  const reason=add(card,el("select",""));reason.hidden=true;reason.required=true;
  const other=add(card,el("textarea",""));other.hidden=true;other.maxLength=1000;other.placeholder="Explica breument el motiu";
  const confWrap=add(card,el("label","check"));confWrap.hidden=true;
  const conf=add(confWrap,el("input",""));conf.type="checkbox";add(confWrap,el("span",""," Confirmo que he revisat les coincidències i vull publicar igualment."));
+ const priorHiddenInfo=add(card,el("p","meta","La coincidència detectada correspon a una d'aquestes dues peces que ja estava oculta. Es reaprofitarà en una sola notícia; no cal confirmar-la com un duplicat nou."));
+ priorHiddenInfo.hidden=true;
+ function updateDuplicateConfirmation(){
+  const action=radios.find(x=>x.checked)?.value||"";
+  const hiddenPair=action==="publish"&&onlyHiddenPairMatches(item,pairSelect.value);
+  priorHiddenInfo.hidden=!hiddenPair;
+  confWrap.hidden=action!=="publish"||!existing.length||hiddenPair;
+  if(confWrap.hidden)conf.checked=false;
+ }
  const status=add(card,el("p","status"));status.setAttribute("role","status");
  function change(){
   if(!saving){allSaved=false;setFeedback("");}
@@ -162,7 +183,7 @@ function build(item,i){
   if(action)reason.add(new Option("Tria un motiu…",""));
   for(const [code,label] of reasons[action]||[]){const option=new Option(label,code);reason.add(option);}
   other.hidden=true;
-  confWrap.hidden=action!=="publish"||!existing.length;
+  updateDuplicateConfirmation();
   if(action!=="publish")conf.checked=false;
   refresh();
  }
@@ -223,7 +244,11 @@ $("save").onclick=async()=>{
        card._status.textContent="L'altra proposta també té una decisió marcada. Deixa-la a «Omet» per agrupar-la.";card._status.className="error";errors++;continue;
      }
    }
-   if(p.action==="publish"&&item.data.matches?.length&&!p.confirm){card._status.textContent="Confirma les coincidències per publicar.";card._status.className="error";errors++;continue;}
+   if(p.action==="publish"&&item.data.matches?.length&&!p.confirm
+       &&!onlyHiddenPairMatches(item,p.related_id)){
+     card._status.textContent="Confirma les coincidències amb altres notícies abans de publicar.";
+     card._status.className="error";errors++;continue;
+    }
    try{
     const d=await api(item,p.action==="publish"&&p.related_id?"publish_pair":p.action,p);
     if(d.needs_confirmation){card._status.textContent="Cal revisar les coincidències.";card._status.className="error";errors++;continue;}
