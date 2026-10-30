@@ -1,0 +1,22 @@
+name: Verifica agrupacio manual social
+on:
+  pull_request:
+    paths:
+      - 'revisio-lot.html'
+      - 'tests/test-review-pair.cjs'
+      - '.github/workflows/verify-review-pair.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'revisio-lot.html'
+      - 'tests/test-review-pair.cjs'
+      - '.github/workflows/verify-review-pair.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/test-review-pair.cjs
