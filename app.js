@@ -362,6 +362,12 @@ function groupingKey(item) {
   return 'id:' + item.id;
 }
 
+// La marca visual de rumor depèn exclusivament de la classificació editorial.
+// El camp is_rumor heretat de radars/importacions no és una autorització per mostrar-la.
+function isExplicitRumor(item) {
+  return item?.section === 'Mercat' && item?.tag === 'Rumor';
+}
+
 function mergeMultimedia(items) {
   const sorted = [...items].sort((a, b) =>
     String(b.detected_at || b.published_at || '').localeCompare(String(a.detected_at || a.published_at || ''))
@@ -392,7 +398,7 @@ function mergeMultimedia(items) {
       importance: previous.importance === 'Important' || normalized.importance === 'Important'
         ? 'Important'
         : previous.importance,
-      is_rumor: Boolean(previous.is_rumor || normalized.is_rumor),
+      is_rumor: isExplicitRumor(previous),
       is_media: Boolean(previous.is_media || normalized.is_media),
       content_group: previous.content_group || normalized.content_group || ''
     });
@@ -411,7 +417,7 @@ function createNewsCard(item) {
   const top=document.createElement('div'); top.className='news-top';
   const sourceBadge=document.createElement('span'); sourceBadge.className='source-badge'; sourceBadge.textContent=sourceInitials(item); sourceBadge.title=item.source || 'Font';
   const topRight=document.createElement('div'); topRight.className='news-top-right';
-  if(item.is_rumor){ const rumor=document.createElement('span'); rumor.className='rumor-pill'; rumor.textContent='RUMOR'; topRight.append(rumor); }
+  if(isExplicitRumor(item)){ const rumor=document.createElement('span'); rumor.className='rumor-pill'; rumor.textContent='RUMOR'; topRight.append(rumor); }
   const icon=document.createElement('span'); icon.className='type-icon'; icon.textContent=typeIcon(item.type); topRight.append(icon);
   top.append(sourceBadge,topRight);
   const links=mediaLinks(item);
