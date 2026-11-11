@@ -92,3 +92,19 @@ El comprovador de Supabase avisa que la protecció contra contrasenyes filtrades
 - Simulació del formulari d'enllaç: crea material de recerca amb autoria i notes sense enviar cap camp de decisió editorial.
 - Simulació de la paginació: amb 1.477 registres, 50 pàgines; primera/última, anada a pàgina 17 i salt a 27 funcionen.
 - **Pendent d'una prova real al navegador:** pujada i obertura de fitxers privats i presentació visual final de tots els apartats.
+
+## Fonts unificades i documents originals (11/11/2026 — millora de la sessió)
+
+- Cada fitxa —a la Safata, al Calendari, a Persones, a Propostes o a Biblioteca— obre **la mateixa vista completa** amb l'apartat `Fonts i documents de la fitxa`, independent de qualsevol decisió editorial.
+- L'apartat mostra l'enllaç de procedència, les referències documentals importades, capítols del llibre relacionats, documents originals i materials de recerca afegits. Les possibles relacions de propostes no verificades es mostren clarament com a **pendents de contrast**.
+- Els materials marcats com a `archived_at` **es mostren per defecte**, amb una etiqueta que indica que es van ocultar anteriorment. `Oculta` substitueix l'antic `Arxiva`: ocultar no esborrarà res. A cada desament es confirma la persistència al servidor i s'actualitza automàticament la llista, sense alterar `archive_calendar_reviews`.
+- Els PDF i les imatges que **ja tenen un fitxer a Supabase Storage** poden visualitzar-se dins la fitxa amb accés temporal signat. Els Word i altres documents es descarreguen amb autenticació, sense fer-los públics.
+- **Verificació d'inventari abans de publicar:** hi ha 136 fonts originals inventariades (117 PDF, 1 DOCX i 18 fotografies/imatges). **0 d'aquestes fonts tenen `storage_path` i 0 objectes originals hi havia al bucket privat** en fer la comprovació. Per tant, NO es pot afirmar que els originals es puguin obrir avui fins a traspassar-ne els bytes reals.
+- Quan es disposi del fitxer original, el formulari del registre documental permet adjuntar-lo al bucket privat i **només el vincula si el SHA-256 i la mida coincideixen amb el registre inventariat**. Això evita substituir erròniament l'original. El camp `storage_path` només es pot establir una vegada, amb RLS d'editor i auditoria. Migració: `migrations/20261111_link_original_documents.sql`.
+- El fitxer que existia a la Biblioteca personal de ChatGPT NO és per si mateix un fitxer a Supabase Storage: les eines disponibles no han permès traslladar automàticament en massa els bytes originals.
+- Cap canvi al Supabase públic, feed, radars, Android, pàgina d'inici de Sempre Penya o continguts editorials originals.
+
+**Verificacions SQL:** en una transacció `ROLLBACK`, un editor autenticat ha pogut vincular una ruta original amb auditoria. Després de desfer-la, les 136 fonts continuen sense `storage_path`.
+**Verificacions JS:** els mòduls tenen sintaxi vàlida i s'ha simulat una fitxa amb l'enllaç original i un article de recerca ja arxivat: tots dos apareixen al panell. També s'han comprovat la previsualització del PDF i la descàrrega de Word amb respostes Storage simulades.
+
+**Pendent de comprovació en navegador real:** que la interfície publicada renderitza correctament les fonts i que un fitxer original s'obre després de pujar-lo. No cal modificar dades originals per comprovar la navegació.
