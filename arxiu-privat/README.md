@@ -18,13 +18,14 @@ Les taules `archive_calendar_baseline` (1.321), `archive_proposals` (156), `arch
 
 ## Navegació v2
 
-1. **Safata de revisió:** vista SQL `archive_review_queue` amb calendari inicial, propostes del llibre/dossiers i aportacions manuals. Cerca, filtre per origen, estat, mes i prioritat; navegació de 30 en 30. Quan es desa una decisió, continua amb el següent pendent.
+1. **Safata de revisió:** vista SQL `archive_review_queue` amb calendari inicial, propostes del llibre/dossiers i aportacions manuals. Cerca, filtres per origen, estat, mes, prioritat, tipus, font i criteri original; navegació de 30 en 30. Quan es desa una decisió, continua amb el següent pendent.
 2. **Calendari original:** conserva la vista íntegra de les 1.321 entrades i ara també permet revisió editorial independent.
 3. **Calendari validat:** vista `archive_validated_calendar`, exclusivament decisions explícites de conservar/corregir o incorporacions aprovades amb dia i mes. Exclou automàticament possibles duplicats i propostes ja vinculades a registres existents. Inclou exportació CSV, amb protecció contra fórmules de full de càlcul.
-4. **Persones:** fitxes i decisions independents incloure/excloure/contrastar (nova `archive_people_reviews`), notes i relacions verificables amb efemèrides (nova `archive_person_event_links`). Coincidències per text presentades únicament com a suggeriments.
-5. **Biblioteca i fonts:** fonts, capítols, dossiers i catàleg de consulta; referències a propostes i notes.
-6. **Seguiment:** dubtes i historial de decisions automatitzat `archive_change_log`.
-7. **Nova proposta:** crear aportacions pròpies. No passen automàticament al Calendari validat.
+4. **Cerca transversal:** cerca de títols a 9.138 registres entre calendari, propostes, persones, fonts, capítols, dossiers, dubtes i catàleg. La vista SQL `archive_global_search` respecta RLS.
+5. **Persones:** fitxes i decisions independents incloure/excloure/contrastar (nova `archive_people_reviews`), notes i relacions verificables amb efemèrides (nova `archive_person_event_links`). Coincidències per text presentades únicament com a suggeriments.
+6. **Biblioteca i fonts:** fonts, capítols, dossiers i catàleg de consulta; referències a propostes i notes.
+7. **Seguiment:** dubtes i historial de decisions automatitzat `archive_change_log`.
+8. **Nova proposta:** crear aportacions pròpies. No passen automàticament al Calendari validat.
 
 ## Decisions i regles
 
@@ -46,11 +47,11 @@ Les taules `archive_calendar_baseline` (1.321), `archive_proposals` (156), `arch
 
 ## Migracions v2
 
-Els fitxers `migrations/20261111_archive_workflow_v2.sql`, `migrations/20261111_remove_duplicate_triggers.sql`  , `migrations/20261111_archive_person_review_links.sql` i `migrations/20261111_notes_dossier_kind.sql` documenten els canvis. Les migracions ja s'han aplicat al projecte històric; **no tornar-les a executar manualment sobre el mateix projecte**.
+Els fitxers `migrations/20261111_archive_workflow_v2.sql`, `migrations/20261111_remove_duplicate_triggers.sql`  , `migrations/20261111_archive_person_review_links.sql` , `migrations/20261111_notes_dossier_kind.sql`, `migrations/20261111_manual_duplicate_guard.sql` i `migrations/20261111_archive_global_search.sql` documenten els canvis. Les migracions ja s'han aplicat al projecte històric; **no tornar-les a executar manualment sobre el mateix projecte**.
 
 ## Verificacions executades
 
-- Nivell SQL: 1.321 originals, 156 propostes, 1.477 elements a la Safata, zero decisions originals alterades i Calendari validat inicialment buit.
+- Nivell SQL: 1.321 originals, 156 propostes, 1.477 elements a la Safata, zero decisions originals alterades i Calendari validat inicialment buit. Cerca transversal de 9.138 registres, sense accés per a no membres.
 - Nivell de permisos: usuaris aliens i anònims sense accés; concessions de columna editorials, originals inalterables.
 - Nivell d'escriptura: inserir/actualitzar revisions i vinculacions, registrar historial, gestionar casos de data absent i duplicats. Proves fetes en transaccions **ROLLBACK**, cap decisió de prova persistent.
 - Nivell de JavaScript: comprovació de sintaxi de tots els fitxers, simulació de l'arrencada, sessió d'owner, estadístiques i navegació entre vistes.
