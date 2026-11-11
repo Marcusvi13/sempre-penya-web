@@ -88,6 +88,8 @@ WF.showRecord=async function(ref){
   if(!current(seq))return;
   if(error)throw error;if(!data){d.textContent='No hem trobat el registre original.';return}
   d.replaceChildren();showMeta(d,data,ref,origin);
+  // La documentació és independent de la decisió editorial: disponible també per a descartats i pendents.
+  const materialsTask=window.ArchiveResearch?.render(d,origin,String(data.id),()=>current(seq))||Promise.resolve();
   const isEvent=['calendar','proposal','manual'].includes(origin);
   if(isEvent){
    const reviewBlock=section(d,'Decisió editorial');
@@ -105,6 +107,7 @@ WF.showRecord=async function(ref){
   const relatedKind=({person:'archive_people',source:'archive_sources',chapter:'archive_chapters',
    dossier:'archive_dossiers',doubt:'archive_doubts',catalogue:'archive_reference_catalogue'})[origin]||origin;
   await Promise.all([
+   materialsTask,
    appendNotes(d,noteKinds[origin],String(data.id),seq),
    ['calendar','proposal','manual','person','doubt'].includes(origin)?
      appendHistory(d,auditTable,String(data.id),seq):Promise.resolve(),
@@ -122,6 +125,7 @@ WF.showExisting=function(record,activeView){
   else p.append(mk('p','empty-state','Aquest registre és de consulta.'));
  }
  Promise.all([
+  window.ArchiveResearch?.render(d,activeView,String(record.id),()=>current(seq))||Promise.resolve(),
   appendNotes(d,noteKinds[activeView]||'source',String(record.id),seq),
   appendRelations(d,activeView,record,seq),
   activeView==='archive_people'?appendHistory(d,'archive_people_reviews',String(record.id),seq):Promise.resolve()

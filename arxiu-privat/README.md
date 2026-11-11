@@ -66,3 +66,29 @@ La recomanació és provar primer amb el compte `owner` i un registre real però
 ## Seguiment de seguretat
 
 El comprovador de Supabase avisa que la protecció contra contrasenyes filtrades està desactivada al projecte històric (`auth_leaked_password_protection`). Es pot activar a la configuració d'Auth, independentment de l'app pública.
+
+## Millores: materials annexos i paginació numèrica (11/11/2026)
+
+### Materials de recerca per a qualsevol fitxa
+
+- Una nova secció **Materials i fonts de recerca** apareix a les fitxes de Calendari, Propostes, Persones, Fonts, Capítols, Dossiers, Dubtes i Catàleg. No exigeix cap decisió editorial.
+- Es poden afegir **enllaços HTTPS**, **referències bibliogràfiques sense URL** i **fitxers privats** (PDF, imatges, Word i TXT; màxim 20 MB per fitxer).
+- Cada material inclou títol, autor/procedència, notes, data d'incorporació i vinculació amb la fitxa concreta.
+- Els fitxers utilitzen el bucket existent `arxiu-historic-privat` (**public=false**, amb RLS); no se n'exposen URL públiques. Per obrir un document, s'emet una URL signada temporal de 120 segons.
+- Només `owner`/`editor` poden incorporar o arxivar materials; la consulta es limita als membres `archive_members`. L'arxivament és reversible i deixa rastre, sense eliminar originals ni fitxers.
+- En cas de fallar la inserció de metadades després de pujar un document, es prova d'eliminar el fitxer que ha quedat solt en el mateix directori `<uuid>/research/`.
+- No s'afegeix res al Calendari validat ni es modifica la decisió editorial en desar una font.
+- Migracions aplicades exclusivament al projecte històric: `migrations/20261111_research_materials.sql` i `migrations/20261111_research_materials_privilege_hardening.sql`. No executar-les una segona vegada sobre el projecte existent.
+
+### Paginació
+
+- A tots els llistats paginats es mostra `Pàgina X de Y`, números de pàgina, primera, última, anterior/següent, salts de 10 i un camp per anar a qualsevol número de pàgina.
+- Les cerques i els filtres continuen determinat el total de pàgines i els registres es carreguen per blocs de 30, sense carregar les 7.003 entrades del catàleg d'una sola vegada.
+
+### Comprovacions
+
+- Alta d'enllaç i arxivament/registre d'historial provats en una transacció **ROLLBACK**, amb el calendari i les decisions intactes.
+- RLS restringeix la lectura als membres; concessions per defecte de SQL endurides: `anon` sense SELECT/INSERT; `authenticated` amb SELECT/INSERT, però UPDATE únicament de l'estat d'arxivament.
+- Simulació del formulari d'enllaç: crea material de recerca amb autoria i notes sense enviar cap camp de decisió editorial.
+- Simulació de la paginació: amb 1.477 registres, 50 pàgines; primera/última, anada a pàgina 17 i salt a 27 funcionen.
+- **Pendent d'una prova real al navegador:** pujada i obertura de fitxers privats i presentació visual final de tots els apartats.
