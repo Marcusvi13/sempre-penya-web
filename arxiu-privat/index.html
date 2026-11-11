@@ -208,9 +208,17 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10" onerror="this.onerror=function(){document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la biblioteca d’autenticació de cap dels dos servidors.'};this.src='https://unpkg.com/@supabase/supabase-js@2.49.10'"></script>
 <script>
 'use strict';
-const URL='https://lfmudiewyupfvtmlgpse.supabase.co';
+const SUPABASE_PROJECT_URL='https://lfmudiewyupfvtmlgpse.supabase.co';
 const KEY='sb_publishable_7oDsnoUAIq1jIVi_0-xWHg_bUVAclgI'; // clau pública: l'accés real el controla RLS
-const db=window.supabase?.createClient(URL,KEY,{auth:{flowType:'implicit',autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+let db=null;
+try{
+  if(!window.supabase?.createClient)throw new Error('La biblioteca de Supabase no està disponible');
+  db=window.supabase.createClient(SUPABASE_PROJECT_URL,KEY,{auth:{flowType:'implicit',autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+}catch(err){
+  const n=document.getElementById('notice');
+  n.hidden=false;n.className='error';
+  n.textContent='No s’ha pogut inicialitzar Supabase: '+(err?.message||String(err));
+}
 const $=id=>document.getElementById(id);
 const views={
 archive_calendar_baseline:{title:'Efemèrides',description:'Calendari inicial: els registres originals no es modifiquen; les decisions editorials es guarden per separat.',fields:'id,title,day,month,historic_year,kind,editorial_decision_original,notes_original,source_url'},
