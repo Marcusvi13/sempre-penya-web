@@ -259,4 +259,7 @@ async function exportValidated(){
 }
 exportBtn.onclick=exportValidated;
 view=queue;page=0;syncUI();
+// Si la sessió del gestor antic ja s'ha resolt abans de carregar aquest script,
+// actualitzem la pantalla perquè no quedi una llista antiga sota la nova navegació.
+if(db&&!get('dashboard').hidden){loadData();loadStats()}
 })();
