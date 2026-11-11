@@ -261,8 +261,13 @@ async function loadData(){const seq=++loadSeq;const v=views[view];$('view-descri
 let q=db.from(view).select(v.fields,{count:'exact'});const query=$('search').value.trim();
 if(query){const field=view==='archive_people'?'name':'title';q=q.ilike(field,'%'+query.replace(/[%_,()]/g,'')+'%')}
 const m=$('month-filter').value;if(m&&!$('month-filter').hidden)q=q.eq('month',Number(m));
-const order=view==='archive_chapters'?'ordinal':view==='archive_people'?'name':'title';
-q=q.order(order,{ascending:true}).range(page*limit,(page+1)*limit-1);
+if(view==='archive_calendar_baseline'||view==='archive_reference_catalogue'){
+ q=q.order('month',{ascending:true}).order('day',{ascending:true}).order('historic_year',{ascending:true});
+}else{
+ const order=view==='archive_chapters'?'ordinal':view==='archive_people'?'name':'title';
+ q=q.order(order,{ascending:true});
+}
+q=q.range(page*limit,(page+1)*limit-1);
 const {data,error,count}=await q;if(seq!==loadSeq)return;if(error){$('results').textContent='No s’han pogut carregar les dades.';notify(error.message,'error');return}
 notify('');rows=data||[];total=count||0;renderRows();$('page-info').textContent=total+' registres · pàgina '+(page+1);
 $('prev').disabled=page===0;$('next').disabled=(page+1)*limit>=total;
@@ -309,8 +314,8 @@ db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){if(w
 if(session&&!window.__archivePasswordRecovery&&$('login').hidden===false)setTimeout(checkAccess,0)});
 checkAccess()}
 </script>
-<script src="workflow.js?v=2"></script>
-<script src="workflow-editor.js?v=2"></script>
-<script src="workflow-relations.js?v=2"></script>
+<script src="workflow.js?v=2" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la nova Safata de revisió.'"></script>
+<script src="workflow-editor.js?v=2" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar l’editor de fitxes.'"></script>
+<script src="workflow-relations.js?v=2" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’han pogut carregar les relacions documentals.'"></script>
 </body>
 </html>
