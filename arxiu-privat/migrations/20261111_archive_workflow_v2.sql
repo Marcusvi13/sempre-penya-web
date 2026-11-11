@@ -125,6 +125,8 @@ revoke all on public.archive_review_queue from public,anon;
 revoke all on public.archive_validated_calendar from public,anon;
 grant select on public.archive_review_queue,public.archive_validated_calendar to authenticated;
 
+-- La majoria de taules ja tenen triggers d'auditoria del projecte original.
+-- Aquí només cal auditar les confirmacions de coincidència.
 -- Registre automàtic i només de lectura des de la web.
 -- Funció privada NO exposada a la Data API, únicament activada per triggers.
 create schema if not exists archive_private;
@@ -151,21 +153,6 @@ end
 $$;
 revoke all on function archive_private.log_editorial_change() from public,anon,authenticated;
 
-create trigger archive_calendar_reviews_audit
-after insert or update on public.archive_calendar_reviews
-for each row execute function archive_private.log_editorial_change();
-create trigger archive_proposals_audit
-after update on public.archive_proposals
-for each row execute function archive_private.log_editorial_change();
-create trigger archive_manual_proposals_audit
-after insert or update on public.archive_manual_proposals
-for each row execute function archive_private.log_editorial_change();
 create trigger archive_proposal_matches_audit
 after update on public.archive_proposal_matches
-for each row execute function archive_private.log_editorial_change();
-create trigger archive_doubts_audit
-after update on public.archive_doubts
-for each row execute function archive_private.log_editorial_change();
-create trigger archive_notes_audit
-after insert on public.archive_notes
 for each row execute function archive_private.log_editorial_change();
