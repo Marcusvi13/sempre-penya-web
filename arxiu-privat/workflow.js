@@ -68,8 +68,8 @@ const wf=window.ArchiveWorkflow={
  refresh:function(){return loadData()},
  showError:function(message){notify(message,'error')},
  afterSaved:async function(message){
-  if(view===queue||view===valid)await loadData();
-  else await originalLoadData();
+  await loadData();
+  await loadStats();
   notify(message,'ok');
  },
  choices:{},
