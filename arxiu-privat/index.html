@@ -63,6 +63,56 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 </main>
 <footer>Arxiu Històric de la Penya · Eina editorial privada, separada del feed de Sempre Penya</footer>
 <script>
+/* Recuperació de contrasenya independent del SDK. El token només viu en memòria i no s'envia a cap tercer. */
+(function(){
+  const params=new URLSearchParams(location.hash.replace(/^#/,''));
+  const token=params.get('access_token'),type=params.get('type');
+  if(!token||type!=='recovery')return;
+  const login=document.getElementById('login');
+  const loginForm=document.getElementById('login-form');
+  const setForm=document.getElementById('set-password-form');
+  const dashboard=document.getElementById('dashboard');
+  const actions=document.getElementById('session-actions');
+  const notice=document.getElementById('notice');
+  function message(s,isError){
+    notice.textContent=s;notice.className=isError?'error':'ok';notice.hidden=false;
+  }
+  window.__archivePasswordRecovery=true;
+  login.hidden=false;loginForm.hidden=true;setForm.hidden=false;dashboard.hidden=true;actions.hidden=true;
+  message('Enllaç de recuperació validat. Introdueix una contrasenya de 12 caràcters o més.',false);
+  setForm.addEventListener('submit',async e=>{
+    e.preventDefault();e.stopImmediatePropagation();
+    const pwd=document.getElementById('new-password').value;
+    const again=document.getElementById('confirm-password').value;
+    if(pwd.length<12){message('Calen almenys 12 caràcters.',true);return}
+    if(pwd!==again){message('Les dues contrasenyes no coincideixen.',true);return}
+    const button=setForm.querySelector('button');button.disabled=true;
+    try{
+      const response=await fetch('https://lfmudiewyupfvtmlgpse.supabase.co/auth/v1/user',{
+        method:'PUT',headers:{
+          apikey:'sb_publishable_7oDsnoUAIq1jIVi_0-xWHg_bUVAclgI',
+          Authorization:'Bearer '+token,
+          'Content-Type':'application/json'
+        },body:JSON.stringify({password:pwd})
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok){
+        message('Supabase ha rebutjat la contrasenya ('+response.status+'): '+(payload.msg||payload.message||payload.error_description||payload.error||'Error desconegut'),true);
+        return;
+      }
+      history.replaceState(null,'',location.pathname+location.search);
+      setForm.reset();setForm.hidden=true;loginForm.hidden=false;
+      window.__archivePasswordRecovery=false;
+      message('Contrasenya creada correctament! Ja pots iniciar sessió amb el correu i la contrasenya.',false);
+      if(window.supabase?.createClient){
+        // La propera entrada per correu i contrasenya es farà amb el formulari normal.
+      }
+    }catch(err){message('Error de connexió: '+(err?.message||'Desconegut'),true)}
+    finally{button.disabled=false}
+  },true);
+})();
+</script>
+<script>
 /* Recuperació independent: no depèn que es carregui el SDK ni que arrenqui el gestor. */
 (function(){
   const button=document.getElementById('forgot-password');
@@ -134,10 +184,10 @@ function prettyKey(k){return ({title:'Títol',name:'Nom',day:'Dia',month:'Mes',h
 function displayValue(v){if(v===null||v===undefined||v==='')return '—';if(typeof v==='boolean')return v?'Sí':'No';return String(v)}
 async function checkAccess(){if(!db){notify('No s’ha pogut carregar el client de connexió. Revisa la connexió a Internet.','error');return}
 const {data:{session},error}=await db.auth.getSession();if(error){notify(error.message,'error');return}
-if(!session){$('set-password-form').hidden=true;$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
+if(!session){if(window.__archivePasswordRecovery)return;$('set-password-form').hidden=true;$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
 const {data,error:memberErr}=await db.from('archive_members').select('role').eq('user_id',session.user.id).maybeSingle();
 if(memberErr||!data){await db.auth.signOut();notify('Aquest compte no és membre autoritzat de l’arxiu.','error');return}
-role=data.role;me=session.user;$('login').hidden=true;$('dashboard').hidden=false;$('session-actions').hidden=false;$('identity').textContent=(me.email||'Usuari')+' · '+role;
+if(window.__archivePasswordRecovery)return;role=data.role;me=session.user;$('login').hidden=true;$('dashboard').hidden=false;$('session-actions').hidden=false;$('identity').textContent=(me.email||'Usuari')+' · '+role;
 await Promise.all([loadStats(),loadData()])}
 async function loadStats(){const tables=['archive_calendar_baseline','archive_proposals','archive_people','archive_chapters','archive_doubts','archive_sources','archive_reference_catalogue'];const counts=await Promise.all(tables.map(async t=>{const {count,error}=await db.from(t).select('id',{count:'exact',head:true});return {name:views[t].title,count:error?'—':count}}));
 $('stats').replaceChildren();counts.forEach(x=>{const div=document.createElement('div');div.className='stat';const b=document.createElement('b');b.textContent=x.count;const s=document.createElement('span');s.textContent=x.name;div.append(b,s);$('stats').append(div)})}
@@ -184,8 +234,8 @@ $('reload').onclick=()=>{loadStats();loadData()};
 let searchDebounce; $('search').oninput=()=>{clearTimeout(searchDebounce);searchDebounce=setTimeout(()=>{page=0;loadData()},350)};
 $('month-filter').onchange=()=>{page=0;loadData()};
 if(db){let recovering=false;
-db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;$('dashboard').hidden=true;$('login').hidden=false;$('login-form').hidden=true;$('set-password-form').hidden=false;$('session-actions').hidden=true;notify('Enllaç verificat. Ara pots establir una contrasenya.','ok');return}
-if(session&&!recovering&&$('login').hidden===false)setTimeout(checkAccess,0)});
+db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){if(window.__archivePasswordRecovery)return;recovering=true;$('dashboard').hidden=true;$('login').hidden=false;$('login-form').hidden=true;$('set-password-form').hidden=false;$('session-actions').hidden=true;notify('Enllaç verificat. Ara pots establir una contrasenya.','ok');return}
+if(session&&!recovering&&!window.__archivePasswordRecovery&&$('login').hidden===false)setTimeout(checkAccess,0)});
 checkAccess()}
 </script>
 </body>
