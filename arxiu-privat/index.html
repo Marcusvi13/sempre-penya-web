@@ -38,9 +38,10 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 <section id="login" class="card login">
 <h2>Accés a l'arxiu</h2><p class="muted">Només els membres autoritzats poden consultar o editar el material històric. Identifica't amb el correu de la invitació.</p>
 <form id="login-form"><label for="email">Correu electrònic</label><input id="email" type="email" autocomplete="email" required placeholder="nom@exemple.cat">
-<div class="inline" style="margin-top:16px"><button type="submit" class="primary" id="send-link">Envia'm un enllaç d'accés</button></div></form>
-<p class="muted">Si el correu conté un codi de sis dígits en lloc d'un enllaç, introdueix-lo aquí:</p>
-<form id="code-form" class="inline"><input id="otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="Codi de 6 dígits" aria-label="Codi de verificació"><button type="submit">Verifica el codi</button></form>
+<label for="password">Contrasenya</label><input id="password" type="password" autocomplete="current-password" required minlength="8">
+<div class="inline" style="margin-top:16px"><button type="submit" class="primary" id="password-login">Entra amb contrasenya</button><button type="button" id="forgot-password">Crea o recupera la contrasenya</button></div></form>
+<p class="muted">La primera vegada, selecciona «Crea o recupera la contrasenya». Rebràs un únic correu per establir-la. Després podràs accedir directament amb la contrasenya sense demanar un correu a cada visita.</p>
+<form id="set-password-form" hidden><label for="new-password">Nova contrasenya (mínim 12 caràcters)</label><input type="password" id="new-password" minlength="12" autocomplete="new-password" required><label for="confirm-password">Repeteix la contrasenya</label><input type="password" id="confirm-password" minlength="12" autocomplete="new-password" required><button class="primary" type="submit">Desa la nova contrasenya</button></form>
 <p class="muted">El correu no dona accés automàtic a qualsevol persona: cal constar també a la llista de membres de l'arxiu.</p>
 </section>
 <section id="dashboard" hidden>
@@ -87,7 +88,7 @@ function prettyKey(k){return ({title:'Títol',name:'Nom',day:'Dia',month:'Mes',h
 function displayValue(v){if(v===null||v===undefined||v==='')return '—';if(typeof v==='boolean')return v?'Sí':'No';return String(v)}
 async function checkAccess(){if(!db){notify('No s’ha pogut carregar el client de connexió. Revisa la connexió a Internet.','error');return}
 const {data:{session},error}=await db.auth.getSession();if(error){notify(error.message,'error');return}
-if(!session){$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
+if(!session){$('set-password-form').hidden=true;$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
 const {data,error:memberErr}=await db.from('archive_members').select('role').eq('user_id',session.user.id).maybeSingle();
 if(memberErr||!data){await db.auth.signOut();notify('Aquest compte no és membre autoritzat de l’arxiu.','error');return}
 role=data.role;me=session.user;$('login').hidden=true;$('dashboard').hidden=false;$('session-actions').hidden=false;$('identity').textContent=(me.email||'Usuari')+' · '+role;
@@ -121,17 +122,27 @@ function manualForm(d){const f=document.createElement('form');f.innerHTML='<hr><
 f.onsubmit=async e=>{e.preventDefault();const day=f.querySelector('#manual-day').value,month=f.querySelector('#manual-month').value;if(Boolean(day)!==Boolean(month)){notify('Indica el dia i el mes, o deixa tots dos buits.','error');return}
 const payload={title:f.querySelector('#manual-title').value.trim(),day:day?Number(day):null,month:month?Number(month):null,historic_year:f.querySelector('#manual-year').value.trim()||null,kind:f.querySelector('#manual-kind').value.trim()||null,evidence:f.querySelector('#manual-evidence').value.trim()||null,notes:f.querySelector('#manual-notes').value.trim(),created_by:me.id};
 const {error}=await db.from('archive_manual_proposals').insert(payload);if(error)notify('Error en desar: '+error.message,'error');else{notify('Proposta creada correctament.','ok');await loadData()}}}
-$('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim();const b=$('send-link');b.disabled=true;
-const {error}=await db.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:'https://semprepenya.cat/arxiu-privat/'}});b.disabled=false;notify(error?'Error: '+error.message:'Si el compte existeix, rebràs un correu amb un enllaç o un codi per entrar.',error?'error':'ok')};
-$('code-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim(),token=$('otp').value.trim();if(!email||!/^[0-9]{6}$/.test(token)){notify('Introdueix el correu i el codi de sis dígits.','error');return}
-const {error}=await db.auth.verifyOtp({email,token,type:'email'});if(error)notify(error.message,'error');else await checkAccess()};
+$('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim(),password=$('password').value;const b=$('password-login');b.disabled=true;
+const {error}=await db.auth.signInWithPassword({email,password});b.disabled=false;if(error)notify('No s’ha pogut iniciar sessió: '+error.message,'error');else{notify('');await checkAccess()}};
+$('forgot-password').onclick=async()=>{if(!db)return;const email=$('email').value.trim();if(!email||!$('email').checkValidity()){notify('Indica primer el teu correu electrònic.','error');return}
+const btn=$('forgot-password');btn.disabled=true;const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://semprepenya.cat/arxiu-privat/'});btn.disabled=false;
+notify(error?'No s’ha pogut enviar el correu: '+error.message:'Si el compte existeix, rebràs un correu per crear o recuperar la contrasenya. Comprova també el correu brossa.',error?'error':'ok')};
+$('set-password-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const password=$('new-password').value,confirm=$('confirm-password').value;
+if(password.length<12||password!==confirm){notify('La contrasenya ha de tenir almenys 12 caràcters i les dues entrades han de coincidir.','error');return}
+const btn=$('set-password-form').querySelector('button');btn.disabled=true;const {error}=await db.auth.updateUser({password});btn.disabled=false;
+if(error){notify('No s’ha pogut desar la contrasenya: '+error.message,'error');return}
+$('set-password-form').reset();$('set-password-form').hidden=true;notify('Contrasenya desada. Ja podràs entrar amb correu i contrasenya.','ok');await checkAccess()};
+
 $('logout').onclick=async()=>{await db.auth.signOut();role=null;me=null;checkAccess()};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('prev').onclick=()=>{if(page>0){page--;loadData()}};$('next').onclick=()=>{if((page+1)*limit<total){page++;loadData()}};
 $('reload').onclick=()=>{loadStats();loadData()};
 let searchDebounce; $('search').oninput=()=>{clearTimeout(searchDebounce);searchDebounce=setTimeout(()=>{page=0;loadData()},350)};
 $('month-filter').onchange=()=>{page=0;loadData()};
-if(db){db.auth.onAuthStateChange((_event,session)=>{if(session&&$('login').hidden===false)setTimeout(checkAccess,0)});checkAccess()}
+if(db){let recovering=false;
+db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recovering=true;$('dashboard').hidden=true;$('login').hidden=false;$('login-form').hidden=true;$('set-password-form').hidden=false;$('session-actions').hidden=true;notify('Enllaç verificat. Ara pots establir una contrasenya.','ok');return}
+if(session&&!recovering&&$('login').hidden===false)setTimeout(checkAccess,0)});
+checkAccess()}
 </script>
 </body>
 </html>
