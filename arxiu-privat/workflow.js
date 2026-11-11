@@ -100,13 +100,25 @@ const filters=[
  {id:'workflow-status',label:'Estat',options:[
   ['Pendent','Pendents de decidir'],['','Tots els estats'],['En contrast','En contrast'],['Sense data','Aprovats sense data'],['Vincle pendent','Vincle pendent'],
   ['Possible duplicat','Possibles duplicats'],['Validat','Validats'],['Descartat','Descartats'],['Fusionat','Fusionats'],['Vinculat','Vinculats']]},
- {id:'workflow-priority',label:'Prioritat',options:[['','Totes'],['Alta','Alta'],['Mitjana','Mitjana'],['Baixa','Baixa']]}
+ {id:'workflow-priority',label:'Prioritat',options:[['','Totes'],['Alta','Alta'],['Mitjana','Mitjana'],['Baixa','Baixa']]},
+ {id:'workflow-original',label:'Criteri original',options:[['','Tots'],['Pendent','Pendent'],['Descartar','Descartar']]}
 ];
 filters.forEach(spec=>{
  const box=document.createElement('div');const l=document.createElement('label');l.textContent=spec.label;l.htmlFor=spec.id;
  const s=document.createElement('select');s.id=spec.id;
  spec.options.forEach(pair=>{const op=document.createElement('option');op.value=pair[0];op.textContent=pair[1];s.append(op)});
  s.onchange=()=>{page=0;loadData()};box.append(l,s);filterBox.append(box);
+});
+// Cercadors específics de categoria i procedència: útils per separar aniversaris, debuts, partits i fonts.
+['kind','source'].forEach(key=>{
+ const box=document.createElement('div');box.className='workflow-extra-filter';
+ const label=document.createElement('label');label.htmlFor='workflow-'+key;
+ label.textContent=key==='kind'?'Categoria / tipus':'Font / procedència';
+ const input=document.createElement('input');input.id='workflow-'+key;input.type='search';
+ input.placeholder=key==='kind'?'Ex.: debut, aniversari…':'Ex.: Escribano, verdinegres…';
+ input.style.maxWidth='210px';let timer;
+ input.oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>{page=0;loadData()},320)};
+ box.append(label,input);filterBox.append(box);
 });
 const actions=document.createElement('div');actions.className='workflow-actions';
 const exportBtn=document.createElement('button');exportBtn.id='archive-export';exportBtn.textContent='Exporta el calendari · CSV';exportBtn.type='button';
@@ -134,7 +146,7 @@ function syncUI(){
   b.onclick=()=>setView(item.view);subnav.append(b);
  });
  const isQ=view===queue;
- filterBox.querySelectorAll('#workflow-origin,#workflow-status,#workflow-priority').forEach(e=>e.parentElement.hidden=!isQ);
+ filterBox.querySelectorAll('#workflow-origin,#workflow-status,#workflow-priority,#workflow-original,#workflow-kind,#workflow-source').forEach(e=>e.parentElement.hidden=!isQ);
  exportBtn.hidden=view!==valid;
  newBtn.hidden=view==='archive_manual_proposals';
  get('month-filter').hidden=![queue,valid,'archive_calendar_baseline','archive_proposals','archive_reference_catalogue','archive_manual_proposals'].includes(view);
@@ -170,9 +182,14 @@ loadData=async function(){
   const m=get('month-filter').value;if(m)q=q.eq('month',Number(m));
   if(view===queue){
    const origin=get('workflow-origin').value,status=get('workflow-status').value,priority=get('workflow-priority').value;
+   const originalDecision=get('workflow-original').value;
+   const kind=slugSafe(get('workflow-kind').value),source=slugSafe(get('workflow-source').value);
    if(origin)q=q.eq('origin',origin);
    if(status)q=q.eq('workflow_state',status);
    if(priority)q=q.eq('priority',priority);
+   if(originalDecision)q=q.eq('original_decision',originalDecision);
+   if(kind)q=q.ilike('kind','%'+kind+'%');
+   if(source)q=q.ilike('source_label','%'+source+'%');
   }
   q=q.order('month',{ascending:true,nullsFirst:false}).order('day',{ascending:true,nullsFirst:false}).order('title',{ascending:true});
  }else q=q.order('changed_at',{ascending:false});
