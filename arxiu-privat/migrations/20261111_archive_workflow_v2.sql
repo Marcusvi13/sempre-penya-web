@@ -84,6 +84,7 @@ select
        when m.decision='Descartar proposta' then 'Descartat'
        when m.decision='Demanar contrast' then 'En contrast'
        when m.decision='Acceptar incorporació' and (m.day is null or m.month is null) then 'Sense data'
+       when m.decision='Acceptar incorporació' and m.status='Duplicat' then 'Possible duplicat'
        when m.decision='Acceptar incorporació' and m.linked_calendar_id is not null then 'Vinculat'
        when m.decision='Acceptar incorporació' then 'Validat'
        when m.decision in ('Ampliar registre existent','Corregir registre existent') and m.linked_calendar_id is null then 'Vincle pendent'
@@ -119,7 +120,8 @@ select 'manual:'||m.id::text,'manual'::text,m.id::text,
   m.title,m.day,m.month,m.historic_year,m.kind,m.source_id,m.decision,m.updated_at
 from public.archive_manual_proposals m
 where m.reviewed and m.decision='Acceptar incorporació'
-  and m.day is not null and m.month is not null and m.linked_calendar_id is null;
+  and m.day is not null and m.month is not null and m.linked_calendar_id is null
+  and m.status <> 'Duplicat';
 
 revoke all on public.archive_review_queue from public,anon;
 revoke all on public.archive_validated_calendar from public,anon;
