@@ -85,3 +85,32 @@
 .pagination-jump button{font-size:13px}
 #prev[hidden],#next[hidden]{display:none!important}
 @media(max-width:550px){.archive-pagination{padding:10px 0}.pagination-buttons button{font-size:12px;padding:6px}.material-section{padding:10px}}
+
+/* Fonts originals i materials de recerca reunits per fitxa */
+.sources-hub{border:1px solid #c9e4d1;border-radius:13px;background:#f7fbf8;padding:15px;margin-top:16px}
+.sources-hub>h4{font-size:17px;margin:0 0 5px;color:#07533b}
+.sources-hub h5{font-size:14px;margin:14px 0 7px;color:#285b44}
+.source-originals,.source-related,.source-related-group{display:grid;gap:7px}
+.source-related-group{padding-top:10px;border-top:1px solid #e2ede5}
+.source-document-row{padding:10px 12px;background:#fff;border:1px solid #d9e7dd;border-radius:9px;display:grid;gap:5px;overflow-wrap:anywhere}
+.source-document-row strong{font-size:13px}
+.source-document-title{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.source-description{font-size:13px;line-height:1.45;margin:1px 0;white-space:pre-wrap}
+.source-open{font-size:13px;text-decoration:underline;color:#006842}
+.source-missing{font-size:12px;line-height:1.5;padding:8px 11px;background:#fff6e6;border-left:3px solid #e2ac4d;color:#755317}
+.source-available{font-size:12px;line-height:1.4;color:#176a42;padding:8px;background:#e4f8ea;border-radius:5px;margin:4px 0}
+.source-upload-original{display:grid;gap:8px;max-width:420px}
+.source-upload-original label{font-size:12px;margin:0}
+.source-upload-original input[type=file]{font-size:12px;cursor:pointer;padding:7px}
+.source-upload-original button,.source-file-button{font-size:12px;width:max-content;max-width:100%}
+.material-subsection{margin-top:15px;padding-top:13px;border-top:1px solid #c9e1d1}
+.material-subsection h4{font-size:14px;margin:0 0 7px}
+.document-preview{margin:10px 0;max-width:100%;display:grid;gap:8px}
+.document-preview:empty{display:none}
+.document-pdf-frame{border:1px solid #cddbd0;border-radius:6px;width:100%;min-height:460px;height:min(75vh,760px);background:white}
+.document-close{font-size:12px;width:max-content}
+.material-archived{opacity:.8}
+@media(max-width:550px){.sources-hub{padding:10px}.document-pdf-frame{min-height:300px;height:60vh}}
+
+.document-image-frame{width:100%;max-width:100%;max-height:70vh;object-fit:contain;border:1px solid #d9e7dd;border-radius:7px;background:white}
+.source-file-card{border-color:#bcd7c6}

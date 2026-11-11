@@ -46,7 +46,7 @@ function showMeta(d,record,ref,origin){
  if(ref.workflow_state)chips.append(WF.tag(ref.workflow_state,ref.workflow_state==='Descartat'?'danger':''));
  if(record.priority)chips.append(WF.tag('Prioritat '+record.priority,record.priority==='Alta'?'warn':'neutral'));
  d.append(chips);
- const source=section(d,'Informació i fonts originals');
+ const source=section(d,'Dades originals del registre');
  if(record.day&&record.month&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Data anual',WF.itemDate(record));
  if(record.historic_year&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Any històric',record.historic_year);
  if(record.status)textRow(source,'Classificació inicial',record.status);
@@ -56,8 +56,6 @@ function showMeta(d,record,ref,origin){
  if(record.evidence)textRow(source,'Evidències',record.evidence);
  if(record.certainty)textRow(source,'Certesa indicada',record.certainty);
  if(record.status_reason)textRow(source,'Motiu de la classificació',record.status_reason);
- if(record.source_url)textRow(source,'Font web',record.source_url);
- if(record.source_label)textRow(source,'Font documental',record.source_label);
  if(record.source_id)textRow(source,'Identificador de la font',record.source_id);
  if(record.chapter_id)textRow(source,'Capítol relacionat',record.chapter_id);
  if(record.chapters?.length)textRow(source,'Capítols referenciats',record.chapters);
@@ -74,7 +72,6 @@ function showMeta(d,record,ref,origin){
  if(record.synopsis)textRow(source,'Sinopsi',record.synopsis);
  if(record.years_referenced?.length)textRow(source,'Anys esmentats',record.years_referenced);
  if(record.people_referenced?.length)textRow(source,'Persones esmentades',record.people_referenced);
- if(record.bibliography)textRow(source,'Bibliografia',record.bibliography);
  return d;
 }
 WF.showRecord=async function(ref){
@@ -89,7 +86,9 @@ WF.showRecord=async function(ref){
   if(error)throw error;if(!data){d.textContent='No hem trobat el registre original.';return}
   d.replaceChildren();showMeta(d,data,ref,origin);
   // La documentació és independent de la decisió editorial: disponible també per a descartats i pendents.
-  const materialsTask=window.ArchiveResearch?.render(d,origin,String(data.id),()=>current(seq))||Promise.resolve();
+  const materialsTask=(window.ArchiveSourcesHub?.render(d,origin,data,()=>current(seq))
+   ||window.ArchiveResearch?.render(d,origin,String(data.id),()=>current(seq))
+   ||Promise.resolve());
   const isEvent=['calendar','proposal','manual'].includes(origin);
   if(isEvent){
    const reviewBlock=section(d,'Decisió editorial');
@@ -125,7 +124,12 @@ WF.showExisting=function(record,activeView){
   else p.append(mk('p','empty-state','Aquest registre és de consulta.'));
  }
  Promise.all([
-  window.ArchiveResearch?.render(d,activeView,String(record.id),()=>current(seq))||Promise.resolve(),
+  (window.ArchiveSourcesHub?.render(d,({
+   archive_people:'person',archive_chapters:'chapter',archive_sources:'source',
+   archive_dossiers:'dossier',archive_doubts:'doubt',archive_reference_catalogue:'catalogue',
+   archive_manual_proposals:'manual'})[activeView]||activeView,record,()=>current(seq))
+   ||window.ArchiveResearch?.render(d,activeView,String(record.id),()=>current(seq))
+   ||Promise.resolve()),
   appendNotes(d,noteKinds[activeView]||'source',String(record.id),seq),
   appendRelations(d,activeView,record,seq),
   activeView==='archive_people'?appendHistory(d,'archive_people_reviews',String(record.id),seq):Promise.resolve()

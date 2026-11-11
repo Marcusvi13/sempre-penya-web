@@ -39,18 +39,49 @@ function makeTextRow(parent,value,label){
  p.append(document.createTextNode(String(value)));
  parent.append(p);
 }
-async function renderMaterials(container,kind,recordId,isCurrent=()=>true){
+async function openPrivateFile(path,fileName,mime='',preview=null){
+ if(!path)throw new Error('Aquest document no està pujat al repositori privat');
+ const isPdf=/\.pdf$/i.test(fileName||'')||mime==='application/pdf';
+ const isImage=/\.(jpe?g|png|webp)$/i.test(fileName||'')||/^image\/(jpeg|png|webp)$/.test(mime);
+ const store=db.storage.from(BUCKET);
+ if((isPdf||isImage)&&preview){
+  const {data,error}=await store.createSignedUrl(path,300);
+  if(error||!data?.signedUrl)throw error||new Error('No s’ha pogut obtenir l’accés temporal');
+  if(preview.childNodes.length){preview.replaceChildren();return}
+  const frame=create(isPdf?'iframe':'img',isPdf?'document-pdf-frame':'document-image-frame');
+  if(isPdf)frame.title='Previsualització del PDF: '+fileName;
+  else frame.alt='Previsualització de la imatge: '+fileName;
+  frame.src=data.signedUrl;
+  frame.setAttribute('loading','lazy');
+  frame.setAttribute('referrerpolicy','no-referrer');
+  const close=create('button','document-close','Tanca la previsualització');
+  close.type='button';close.onclick=()=>preview.replaceChildren();
+  const open=create('a','material-link',isPdf?'Obre el PDF en una pestanya':'Obre la imatge en una pestanya');
+  open.href=data.signedUrl;open.target='_blank';open.rel='noopener noreferrer';
+  preview.append(close,open,frame);
+  return;
+ }
+ // Word i altres fitxers: descàrrega autentificada, sense servei extern ni URL pública.
+ const {data,error}=await store.download(path);
+ if(error||!data)throw error||new Error('El fitxer no està disponible');
+ const url=URL.createObjectURL(data);
+ const a=create('a');
+ a.href=url;a.download=fileName||'document';
+ document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+async function renderMaterials(container,kind,recordId,isCurrent=()=>true,options={}){
  const target=kindMap[kind];
  if(!target||!recordId||!isCurrent())return;
- const section=create('section','detail-section material-section');
- const title=create('h4','','Materials i fonts de recerca');
+ const section=create(options.embedded?'div':'section',options.embedded?'material-subsection':'detail-section material-section');
+ const title=create('h4','',options.embedded?'Materials afegits a la fitxa':'Materials i fonts de recerca');
  const explanation=create('p','mini-help',
   'Afegeix articles, documents i referències sense decidir si aquesta persona o efemèride ha de sortir al calendari. La fitxa original no canvia.');
  section.append(title,explanation);
  const controls=create('div','material-controls');
  const archivedToggle=create('label','material-archived-toggle');
- const checkbox=create('input');checkbox.type='checkbox';checkbox.checked=false;
- archivedToggle.append(checkbox,document.createTextNode('Mostra materials arxivats'));
+ const checkbox=create('input');checkbox.type='checkbox';checkbox.checked=true;
+ archivedToggle.append(checkbox,document.createTextNode('Inclou també els materials ocultats'));
  controls.append(archivedToggle);
  const refresh=create('button','','Actualitza els materials');refresh.type='button';controls.append(refresh);
  section.append(controls);
@@ -92,37 +123,32 @@ async function renderMaterials(container,kind,recordId,isCurrent=()=>true){
     a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';
     row.append(a);
    }else if(item.file_path){
-    const b=create('button','material-open','Obre el document privat');
-    b.type='button';b.onclick=async()=>{
-     b.disabled=true;
-     // Obrim la pestanya en el gest del clic per no topar amb el bloqueig de finestres emergents.
-     const pop=window.open('about:blank','_blank');
-     if(pop)pop.opener=null;
-     try{
-      const {data,error}=await db.storage.from(BUCKET).createSignedUrl(item.file_path,120);
-      if(error||!data?.signedUrl)throw error||new Error('No hem pogut obtenir l’enllaç temporal');
-      if(pop)pop.location.replace(data.signedUrl);
-      else window.location.assign(data.signedUrl);
-     }catch(err){
-      if(pop)pop.close();
-      WF.showError('No hem pogut obrir el fitxer privat: '+errorMessage(err));
-     }finally{b.disabled=false}
+    const isPdf=/\.pdf$/i.test(item.file_name||'')||item.mime_type==='application/pdf';
+    const isImage=/\.(jpe?g|png|webp)$/i.test(item.file_name||'');
+    const b=create('button','material-open',isPdf?'Visualitza el PDF':isImage?'Visualitza la imatge':'Descarrega el document privat');
+    b.type='button';
+    const preview=create('div','document-preview');
+    b.onclick=async()=>{
+      b.disabled=true;
+      try{await openPrivateFile(item.file_path,item.file_name||item.title,item.mime_type||'',preview)}
+      catch(err){WF.showError('No s’ha pogut obrir el document privat: '+errorMessage(err))}
+      finally{b.disabled=false}
     };
-    row.append(b);
+    row.append(b,preview);
     makeTextRow(row,(item.file_name||'Document')+(item.file_size?' · '+(item.file_size/1024/1024).toFixed(1)+' MB':''),'Fitxer');
    }
    makeTextRow(row,item.source_author,'Autor o procedència');
    makeTextRow(row,item.description,'Resum o observacions');
    const foot=create('div','material-footer');
    foot.append(create('small','',formatDate(item.created_at)));
-   if(item.archived_at)foot.append(WF.tag('Arxivat','neutral'));
+   if(item.archived_at)foot.append(WF.tag('Ocultat anteriorment (conservat)','neutral'));
    if(WF.isEditor()){
-    const action=create('button','material-archive',item.archived_at?'Restaura':'Arxiva');
+    const action=create('button','material-archive',item.archived_at?'Torna a mostrar':'Oculta');
     action.type='button';
     action.onclick=async()=>{
      if(!window.confirm(item.archived_at
        ?'Vols tornar a mostrar aquest material a la fitxa?'
-       :'Vols arxivar aquest material? No es destruirà el document.'))return;
+       :'Vols ocultar aquest material de les llistes habituals? El document no s’esborrarà.'))return;
      action.disabled=true;
      const {error}=await db.from(TABLE).update({
        archived_at:item.archived_at?null:new Date().toISOString(),
@@ -159,7 +185,7 @@ async function renderMaterials(container,kind,recordId,isCurrent=()=>true){
    '<input id="research-author" type="text" maxlength="250" placeholder="Ex.: Endesa Basket Lover">'+
    '<label for="research-description">Notes sobre aquest material</label>'+
    '<textarea id="research-description" rows="3" placeholder="Per què és rellevant? Quines dades conté?"></textarea>'+
-   '<div class="editor-actions"><button type="submit" class="primary">Desa el material</button></div>';
+   '<div class="editor-actions"><button type="submit" class="primary">Desa i incorpora a la fitxa</button></div>';
   const feedback=create('p','material-feedback');
   feedback.hidden=true;
   form.append(feedback);
@@ -218,12 +244,14 @@ async function renderMaterials(container,kind,recordId,isCurrent=()=>true){
      payload.file_path=path;payload.file_name=file.name.slice(0,255);
      payload.file_size=file.size;payload.mime_type=file.type||null;
     }
-    const {error}=await db.from(TABLE).insert(payload);
+    const {data:saved,error}=await db.from(TABLE).insert(payload).select('id').single();
     if(error)throw error;
+    if(!saved?.id)throw new Error('El servidor no ha confirmat que el material s’hagi desat');
     uploadedPath=null;
     form.reset();switchType();
-    showMessage(feedback,'Material incorporat a la fitxa. No s’ha pres cap decisió editorial.',false);
     await fetchList();
+    showMessage(feedback,'Desat a l’arxiu i vinculat a aquesta fitxa. Apareix a la llista de materials; cap decisió editorial modificada.',false);
+    section.scrollIntoView({behavior:'smooth',block:'nearest'});
    }catch(err){
     const msg=errorMessage(err);
     if(uploadedPath){
@@ -237,5 +265,5 @@ async function renderMaterials(container,kind,recordId,isCurrent=()=>true){
  }
  await fetchList();
 }
-window.ArchiveResearch={render:renderMaterials};
+window.ArchiveResearch={render:renderMaterials,openPrivateFile};
 })();
