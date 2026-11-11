@@ -158,7 +158,7 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
   });
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/dist/umd/supabase.js" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar el servei d’identificació. Torna a carregar la pàgina.'"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10" onerror="this.onerror=function(){document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la biblioteca d’autenticació de cap dels dos servidors.'};this.src='https://unpkg.com/@supabase/supabase-js@2.49.10'"></script>
 <script>
 'use strict';
 const URL='https://lfmudiewyupfvtmlgpse.supabase.co';
@@ -182,13 +182,22 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 function label(r){return r.title||r.name||r.id||'Sense títol'}
 function prettyKey(k){return ({title:'Títol',name:'Nom',day:'Dia',month:'Mes',historic_year:'Any històric',kind:'Tipus',status:'Estat',decision:'Decisió',notes:'Notes',notes_original:'Notes originals',evidence:'Evidències',source_url:'Font original',source_label:'Font',bibliography:'Bibliografia',category:'Categoria',birth_label:'Naixement',priority:'Prioritat',printed_page:'Pàgina',synopsis:'Sinopsi',explanation:'Explicació',editorial_notes:'Notes editorials',editorial_decision_original:'Decisió original',original_decision:'Decisió original',document_date:'Data documental',author:'Autor',reviewed:'Revisat',version:'Versió',id:'Identificador'})[k]||k}
 function displayValue(v){if(v===null||v===undefined||v==='')return '—';if(typeof v==='boolean')return v?'Sí':'No';return String(v)}
-async function checkAccess(){if(!db){notify('No s’ha pogut carregar el client de connexió. Revisa la connexió a Internet.','error');return}
-const {data:{session},error}=await db.auth.getSession();if(error){notify(error.message,'error');return}
-if(!session){if(window.__archivePasswordRecovery)return;$('set-password-form').hidden=true;$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
+async function checkAccess(){
+if(!db){notify('No s’ha pogut carregar la biblioteca Supabase. Comprova la connexió o els bloquejadors del navegador.','error');return}
+try{
+const {data:{session},error}=await db.auth.getSession();
+if(error){notify('Error llegint la sessió: '+error.message,'error');return}
+if(!session){if(window.__archivePasswordRecovery)return;$('set-password-form').hidden=true;$('login-form').hidden=false;$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
 const {data,error:memberErr}=await db.from('archive_members').select('role').eq('user_id',session.user.id).maybeSingle();
-if(memberErr||!data){await db.auth.signOut();notify('Aquest compte no és membre autoritzat de l’arxiu.','error');return}
-if(window.__archivePasswordRecovery)return;role=data.role;me=session.user;$('login').hidden=true;$('dashboard').hidden=false;$('session-actions').hidden=false;$('identity').textContent=(me.email||'Usuari')+' · '+role;
-await Promise.all([loadStats(),loadData()])}
+if(memberErr){notify('No podem verificar els permisos de l’arxiu: '+memberErr.message,'error');return}
+if(!data){notify('Aquest usuari no està autoritzat per accedir a l’arxiu. Contacta amb l’administració.','error');return}
+if(window.__archivePasswordRecovery)return;
+role=data.role;me=session.user;
+$('login').hidden=true;$('dashboard').hidden=false;$('session-actions').hidden=false;
+$('identity').textContent=(me.email||'Usuari')+' · '+role;
+notify('');await Promise.all([loadStats(),loadData()])
+}catch(err){notify('Error en preparar el gestor: '+(err?.message||'Error desconegut'),'error')}
+}
 async function loadStats(){const tables=['archive_calendar_baseline','archive_proposals','archive_people','archive_chapters','archive_doubts','archive_sources','archive_reference_catalogue'];const counts=await Promise.all(tables.map(async t=>{const {count,error}=await db.from(t).select('id',{count:'exact',head:true});return {name:views[t].title,count:error?'—':count}}));
 $('stats').replaceChildren();counts.forEach(x=>{const div=document.createElement('div');div.className='stat';const b=document.createElement('b');b.textContent=x.count;const s=document.createElement('span');s.textContent=x.name;div.append(b,s);$('stats').append(div)})}
 function setView(next){view=next;page=0;selected=null;$('search').value='';$('month-filter').value='';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('month-filter').hidden=!['archive_calendar_baseline','archive_proposals','archive_reference_catalogue','archive_manual_proposals'].includes(view);loadData()}
@@ -218,8 +227,14 @@ function manualForm(d){const f=document.createElement('form');f.innerHTML='<hr><
 f.onsubmit=async e=>{e.preventDefault();const day=f.querySelector('#manual-day').value,month=f.querySelector('#manual-month').value;if(Boolean(day)!==Boolean(month)){notify('Indica el dia i el mes, o deixa tots dos buits.','error');return}
 const payload={title:f.querySelector('#manual-title').value.trim(),day:day?Number(day):null,month:month?Number(month):null,historic_year:f.querySelector('#manual-year').value.trim()||null,kind:f.querySelector('#manual-kind').value.trim()||null,evidence:f.querySelector('#manual-evidence').value.trim()||null,notes:f.querySelector('#manual-notes').value.trim(),created_by:me.id};
 const {error}=await db.from('archive_manual_proposals').insert(payload);if(error)notify('Error en desar: '+error.message,'error');else{notify('Proposta creada correctament.','ok');await loadData()}}}
-$('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim(),password=$('password').value;const b=$('password-login');b.disabled=true;
-const {error}=await db.auth.signInWithPassword({email,password});b.disabled=false;if(error)notify('No s’ha pogut iniciar sessió: '+error.message,'error');else{notify('');await checkAccess()}};
+$('login-form').onsubmit=async e=>{e.preventDefault();if(!db){notify('No s’ha pogut carregar el motor d’autenticació. Prova amb un navegador diferent o desactiva temporalment bloquejadors per aquesta pàgina.','error');return}
+const email=$('email').value.trim(),password=$('password').value,b=$('password-login');b.disabled=true;notify('Comprovant les credencials…','ok');
+try{
+const {error}=await db.auth.signInWithPassword({email,password});
+if(error){notify('No s’ha pogut iniciar sessió: '+error.message,'error');return}
+notify('Identificació correcta. Carregant l’arxiu…','ok');await checkAccess();
+}catch(err){notify('Error d’accés: '+(err?.message||'Error desconegut'),'error')}finally{b.disabled=false}
+};
 // El botó de recuperació es gestiona en un script independent abans de carregar la biblioteca.
 $('set-password-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const password=$('new-password').value,confirm=$('confirm-password').value;
 if(password.length<10||password!==confirm){notify('La contrasenya ha de tenir almenys 10 caràcters i les dues entrades han de coincidir.','error');return}
