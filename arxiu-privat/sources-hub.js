@@ -189,14 +189,16 @@ async function render(container,kind,record,alive=()=>true){
   box.append(el('h5','','Fonts d’origen'));
   box.append(direct);
  }
+ const related=el('div','source-related');
+ box.append(related);
  container.append(box);
  try{
+  const linked=relatedDocuments(related,kind,record,alive);
   if(window.ArchiveResearch?.render)
    await window.ArchiveResearch.render(box,kind,String(record.id),alive,{embedded:true});
+  await linked;
   if(!alive())return;
-  const related=el('div','source-related');
-  await relatedDocuments(related,kind,record,alive);
-  if(alive()&&related.childNodes.length)box.append(related);
+  if(!related.childNodes.length)related.remove();
  }catch(error){
   if(alive())note(box,'Error en recuperar algunes fonts: '+(error?.message||error));
  }
