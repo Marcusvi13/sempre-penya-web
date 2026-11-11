@@ -47,6 +47,8 @@ function showMeta(d,record,ref,origin){
  if(record.priority)chips.append(WF.tag('Prioritat '+record.priority,record.priority==='Alta'?'warn':'neutral'));
  d.append(chips);
  const source=section(d,'Informació i fonts originals');
+ if(record.day&&record.month&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Data anual',WF.itemDate(record));
+ if(record.historic_year&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Any històric',record.historic_year);
  if(record.status)textRow(source,'Classificació inicial',record.status);
  if(record.editorial_decision_original)textRow(source,'Decisió original importada',record.editorial_decision_original);
  if(record.original_decision)textRow(source,'Decisió original importada',record.original_decision);
@@ -70,6 +72,8 @@ function showMeta(d,record,ref,origin){
  if(record.explanation)textRow(source,'Explicació',record.explanation);
  if(record.chapters_label)textRow(source,'Capítols documentals',record.chapters_label);
  if(record.synopsis)textRow(source,'Sinopsi',record.synopsis);
+ if(record.years_referenced?.length)textRow(source,'Anys esmentats',record.years_referenced);
+ if(record.people_referenced?.length)textRow(source,'Persones esmentades',record.people_referenced);
  if(record.bibliography)textRow(source,'Bibliografia',record.bibliography);
  return d;
 }
