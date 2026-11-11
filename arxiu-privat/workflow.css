@@ -1,0 +1,50 @@
+/* Arxiu Històric — espai editorial v2. CSS aïllat de Sempre Penya públic. */
+.tabs{margin:12px 0 9px}
+.tabs button{font-size:14px}
+.subtabs{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 18px}
+.subtabs:empty{display:none}
+.subtabs button{font-size:13px;padding:7px 11px;border:1px solid #d5e2d9}
+.subtabs button.active{background:#ecf6ef;border-color:#267b54;color:#07563c}
+.workflow-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;border-top:1px solid #e1eae2;margin-top:14px;padding-top:14px}
+.workflow-filters label{margin:0 0 4px}
+.workflow-filters select{min-width:130px;max-width:220px}
+.workflow-filters [hidden]{display:none!important}
+.workflow-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.workflow-actions button{font-size:13px}
+.record-title{font-weight:750}
+.item{transition:background .12s}
+.item small{display:block;line-height:1.5;margin-top:5px}
+.item .tiny{font-size:11px;color:#61776a;display:block;margin-top:4px}
+.record-tag{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:4px 8px;background:#e9f2eb;color:#1d6044;margin:0 4px 4px 0}
+.record-tag.warn{color:#855500;background:#fff2d9}
+.record-tag.danger{color:#892c29;background:#fde9e7}
+.record-tag.neutral{color:#3f5650;background:#eff3f1}
+.detail-tools{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 16px}
+.detail-tools button{font-size:12px}
+.detail-heading{font-size:19px;line-height:1.35;margin:0 0 11px;word-break:break-word}
+.detail-meta{font-size:13px;color:#556d5d;margin-bottom:8px}
+.detail-section{padding-top:13px;margin-top:15px;border-top:1px solid #e3eae4}
+.detail-section h4{font-size:15px;margin:0 0 8px;color:#0c533c}
+.detail-section p{margin:7px 0;line-height:1.5;overflow-wrap:anywhere}
+.detail-section .note{white-space:pre-wrap}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.editor-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:14px}
+.editor-actions button{min-width:120px}
+.editor-card{background:#f8fbf8;border:1px solid #d9e7db;border-radius:11px;padding:14px;margin-top:13px}
+.editor-card h4{margin:0 0 10px}
+.editor-card textarea{min-height:82px}
+.inline-link{color:#086546;text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;display:inline;text-align:left;font-weight:650}
+.related-row{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e9efea}
+.related-row:last-child{border:0}
+.related-row button{font-size:12px;flex:none}
+.mini-help{font-size:12px;line-height:1.45;color:#62766b}
+.history-row{border-bottom:1px solid #e6ebe6;padding:10px 0;font-size:13px}
+.history-row:last-child{border:0}
+.history-row .tiny{font-size:11px;color:#64766b}
+.empty-state{color:#667b6c;font-size:14px;line-height:1.5}
+#detail .editor-card [hidden],#detail .field-grid [hidden]{display:none!important}
+#detail .warn-msg{border-left:3px solid #dfa133;background:#fff8e9;padding:10px 12px;color:#70500b;margin:10px 0;font-size:13px}
+#detail .success-msg{border-left:3px solid #1c8b62;background:#e9f8ee;padding:10px 12px;color:#155640;margin:10px 0;font-size:13px}
+#detail a{color:#066c49}
+#detail code{overflow-wrap:anywhere}
+@media(max-width:900px){.workflow-actions{margin-left:0}.workflow-filters select{min-width:110px}.field-grid{grid-template-columns:1fr}}
