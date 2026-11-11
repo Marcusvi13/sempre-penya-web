@@ -41,7 +41,7 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 <label for="password">Contrasenya</label><input id="password" type="password" autocomplete="current-password" required minlength="8">
 <div class="inline" style="margin-top:16px"><button type="submit" class="primary" id="password-login">Entra amb contrasenya</button><button type="button" id="forgot-password">Crea o recupera la contrasenya</button></div></form>
 <p class="muted">La primera vegada, selecciona «Crea o recupera la contrasenya». Rebràs un únic correu per establir-la. Després podràs accedir directament amb la contrasenya sense demanar un correu a cada visita.</p>
-<form id="set-password-form" hidden><label for="new-password">Nova contrasenya (mínim 12 caràcters)</label><input type="password" id="new-password" minlength="12" autocomplete="new-password" required><label for="confirm-password">Repeteix la contrasenya</label><input type="password" id="confirm-password" minlength="12" autocomplete="new-password" required><button class="primary" type="submit">Desa la nova contrasenya</button></form>
+<form id="set-password-form" hidden><label for="new-password">Nova contrasenya (mínim 10 caràcters)</label><input type="password" id="new-password" minlength="10" autocomplete="new-password" required><label for="confirm-password">Repeteix la contrasenya</label><input type="password" id="confirm-password" minlength="10" autocomplete="new-password" required><button class="primary" type="submit">Desa la nova contrasenya</button></form>
 <p class="muted">El correu no dona accés automàtic a qualsevol persona: cal constar també a la llista de membres de l'arxiu.</p>
 </section>
 <section id="dashboard" hidden>
@@ -79,12 +79,12 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
   }
   window.__archivePasswordRecovery=true;
   login.hidden=false;loginForm.hidden=true;setForm.hidden=false;dashboard.hidden=true;actions.hidden=true;
-  message('Enllaç de recuperació validat. Introdueix una contrasenya de 12 caràcters o més.',false);
+  message('Enllaç de recuperació validat. Introdueix una contrasenya de 10 caràcters o més.',false);
   setForm.addEventListener('submit',async e=>{
     e.preventDefault();e.stopImmediatePropagation();
     const pwd=document.getElementById('new-password').value;
     const again=document.getElementById('confirm-password').value;
-    if(pwd.length<12){message('Calen almenys 12 caràcters.',true);return}
+    if(pwd.length<10){message('Calen almenys 10 caràcters.',true);return}
     if(pwd!==again){message('Les dues contrasenyes no coincideixen.',true);return}
     const button=setForm.querySelector('button');button.disabled=true;
     try{
@@ -222,7 +222,7 @@ $('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=
 const {error}=await db.auth.signInWithPassword({email,password});b.disabled=false;if(error)notify('No s’ha pogut iniciar sessió: '+error.message,'error');else{notify('');await checkAccess()}};
 // El botó de recuperació es gestiona en un script independent abans de carregar la biblioteca.
 $('set-password-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const password=$('new-password').value,confirm=$('confirm-password').value;
-if(password.length<12||password!==confirm){notify('La contrasenya ha de tenir almenys 12 caràcters i les dues entrades han de coincidir.','error');return}
+if(password.length<10||password!==confirm){notify('La contrasenya ha de tenir almenys 10 caràcters i les dues entrades han de coincidir.','error');return}
 const btn=$('set-password-form').querySelector('button');btn.disabled=true;const {error}=await db.auth.updateUser({password});btn.disabled=false;
 if(error){notify('No s’ha pogut desar la contrasenya: '+error.message,'error');return}
 $('set-password-form').reset();$('set-password-form').hidden=true;notify('Contrasenya desada. Ja podràs entrar amb correu i contrasenya.','ok');await checkAccess()};
