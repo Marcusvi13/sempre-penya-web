@@ -7,7 +7,7 @@ const get=WF.get;
 const tables={calendar:'archive_calendar_baseline',proposal:'archive_proposals',manual:'archive_manual_proposals'};
 const noteKinds={calendar:'calendar',proposal:'proposal',manual:'proposal',
  archive_people:'person',archive_chapters:'chapter',archive_sources:'source',
- archive_dossiers:'source',archive_doubts:'doubt',archive_reference_catalogue:'catalogue'};
+ archive_dossiers:'dossier',archive_doubts:'doubt',archive_reference_catalogue:'catalogue'};
 let detailSequence=0;
 const editable=()=>WF.isEditor();
 function mk(tag,cls,text){
