@@ -4,8 +4,8 @@
 'use strict';
 const WF=window.ArchiveWorkflow;if(!WF)return;
 const get=WF.get;
-const tables={calendar:'archive_calendar_baseline',proposal:'archive_proposals',manual:'archive_manual_proposals'};
-const noteKinds={calendar:'calendar',proposal:'proposal',manual:'proposal',
+const tables={calendar:'archive_calendar_baseline',proposal:'archive_proposals',manual:'archive_manual_proposals',person:'archive_people',source:'archive_sources',chapter:'archive_chapters',dossier:'archive_dossiers',doubt:'archive_doubts',catalogue:'archive_reference_catalogue'};
+const noteKinds={calendar:'calendar',proposal:'proposal',manual:'proposal',person:'person',source:'source',chapter:'chapter',dossier:'dossier',doubt:'doubt',catalogue:'catalogue',
  archive_people:'person',archive_chapters:'chapter',archive_sources:'source',
  archive_dossiers:'dossier',archive_doubts:'doubt',archive_reference_catalogue:'catalogue'};
 let detailSequence=0;
@@ -63,6 +63,12 @@ function showMeta(d,record,ref,origin){
  if(record.linked_calendar_id)textRow(source,'Enllaç inicial al calendari',record.linked_calendar_id);
  if(record.notes&&origin==='manual')textRow(source,'Notes de l’aportació',record.notes);
  if(record.birth_label)textRow(source,'Naixement',record.birth_label);
+ if(record.author)textRow(source,'Autor',record.author);
+ if(record.document_date)textRow(source,'Data del document',record.document_date);
+ if(record.thematic_type)textRow(source,'Classificació temàtica',record.thematic_type);
+ if(record.printed_page)textRow(source,'Pàgina',record.printed_page);
+ if(record.explanation)textRow(source,'Explicació',record.explanation);
+ if(record.chapters_label)textRow(source,'Capítols documentals',record.chapters_label);
  if(record.synopsis)textRow(source,'Sinopsi',record.synopsis);
  if(record.bibliography)textRow(source,'Bibliografia',record.bibliography);
  return d;
@@ -78,14 +84,27 @@ WF.showRecord=async function(ref){
   if(!current(seq))return;
   if(error)throw error;if(!data){d.textContent='No hem trobat el registre original.';return}
   d.replaceChildren();showMeta(d,data,ref,origin);
-  const reviewBlock=section(d,'Decisió editorial');
-  if(editable())await renderEventEditor(reviewBlock,data,origin,seq);
-  else reviewBlock.append(mk('p','empty-state','Compte de consulta: no pots modificar decisions.'));
+  const isEvent=['calendar','proposal','manual'].includes(origin);
+  if(isEvent){
+   const reviewBlock=section(d,'Decisió editorial');
+   if(editable())await renderEventEditor(reviewBlock,data,origin,seq);
+   else reviewBlock.append(mk('p','empty-state','Compte de consulta: no pots modificar decisions.'));
+  }else if(origin==='person'){
+   const reviewBlock=section(d,'Selecció de persones');
+   if(editable())await renderPersonEditor(reviewBlock,data,seq);
+  }else if(origin==='doubt'&&editable()){
+   const reviewBlock=section(d,'Seguiment del dubte');
+   editorDoubt(reviewBlock,data);
+  }
   if(!current(seq))return;
+  const auditTable=origin==='calendar'?'archive_calendar_reviews':origin==='person'?'archive_people_reviews':table;
+  const relatedKind=({person:'archive_people',source:'archive_sources',chapter:'archive_chapters',
+   dossier:'archive_dossiers',doubt:'archive_doubts',catalogue:'archive_reference_catalogue'})[origin]||origin;
   await Promise.all([
    appendNotes(d,noteKinds[origin],String(data.id),seq),
-   appendHistory(d,origin==='calendar'?'archive_calendar_reviews':table,String(data.id),seq),
-   appendRelations(d,origin,data,seq)
+   ['calendar','proposal','manual','person','doubt'].includes(origin)?
+     appendHistory(d,auditTable,String(data.id),seq):Promise.resolve(),
+   appendRelations(d,relatedKind,data,seq)
   ]);
  }catch(e){if(current(seq)){d.replaceChildren();noticeBox(d,'No s’ha pogut obrir la fitxa: '+explainError(e));}}
 };
