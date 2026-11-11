@@ -46,7 +46,7 @@ Les taules `archive_calendar_baseline` (1.321), `archive_proposals` (156), `arch
 
 ## Migracions v2
 
-Els fitxers `migrations/20261111_archive_workflow_v2.sql`, `migrations/20261111_remove_duplicate_triggers.sql` i `migrations/20261111_archive_person_review_links.sql` documenten els canvis. Les migracions ja s'han aplicat al projecte històric; **no tornar-les a executar manualment sobre el mateix projecte**.
+Els fitxers `migrations/20261111_archive_workflow_v2.sql`, `migrations/20261111_remove_duplicate_triggers.sql`  , `migrations/20261111_archive_person_review_links.sql` i `migrations/20261111_notes_dossier_kind.sql` documenten els canvis. Les migracions ja s'han aplicat al projecte històric; **no tornar-les a executar manualment sobre el mateix projecte**.
 
 ## Verificacions executades
 
