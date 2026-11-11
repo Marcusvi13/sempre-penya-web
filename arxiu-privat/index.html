@@ -37,7 +37,7 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 <div id="notice" role="status" hidden></div>
 <section id="login" class="card login">
 <h2>Accés a l'arxiu</h2><p class="muted">Només els membres autoritzats poden consultar o editar el material històric. Identifica't amb el correu de la invitació.</p>
-<form id="login-form"><label for="email">Correu electrònic</label><input id="email" type="email" autocomplete="email" required placeholder="nom@exemple.cat">
+<form id="login-form" onsubmit="event.preventDefault()"><label for="email">Correu electrònic</label><input id="email" type="email" autocomplete="email" required placeholder="nom@exemple.cat">
 <label for="password">Contrasenya</label><input id="password" type="password" autocomplete="current-password" required minlength="8">
 <div class="inline" style="margin-top:16px"><button type="submit" class="primary" id="password-login">Entra amb contrasenya</button><button type="button" id="forgot-password">Crea o recupera la contrasenya</button></div></form>
 <p class="muted">La primera vegada, selecciona «Crea o recupera la contrasenya». Rebràs un únic correu per establir-la. Després podràs accedir directament amb la contrasenya sense demanar un correu a cada visita.</p>
@@ -158,6 +158,32 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
   });
 })();
 </script>
+<script>
+(function(){
+  // Captura qualsevol formulari si el gestor principal falla abans d'instal·lar els seus gestors.
+  const form=document.getElementById('login-form');
+  form.addEventListener('submit',event=>{
+    event.preventDefault();
+    const notice=document.getElementById('notice');
+    notice.hidden=false;notice.className='ok';
+    notice.textContent='S’ha rebut la petició d’entrada. Comprovant el servei d’autenticació…';
+    setTimeout(()=>{
+      const login=document.getElementById('login');
+      const dashboard=document.getElementById('dashboard');
+      if(!dashboard.hidden)return;
+      if(!window.__archiveLoginHandlerReady){
+        notice.className='error';
+        notice.textContent='El programa d’accés no s’ha carregat completament. No és un problema de la contrasenya. Comprova els bloquejadors del navegador i informa d’aquest error.';
+      }
+    },2500);
+  },true);
+  window.addEventListener('error',event=>{
+    const notice=document.getElementById('notice');
+    notice.hidden=false;notice.className='error';
+    notice.textContent='Error tècnic de la pàgina: '+(event.message||'No s’ha pogut carregar un recurs');
+  });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10" onerror="this.onerror=function(){document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la biblioteca d’autenticació de cap dels dos servidors.'};this.src='https://unpkg.com/@supabase/supabase-js@2.49.10'"></script>
 <script>
 'use strict';
@@ -227,10 +253,11 @@ function manualForm(d){const f=document.createElement('form');f.innerHTML='<hr><
 f.onsubmit=async e=>{e.preventDefault();const day=f.querySelector('#manual-day').value,month=f.querySelector('#manual-month').value;if(Boolean(day)!==Boolean(month)){notify('Indica el dia i el mes, o deixa tots dos buits.','error');return}
 const payload={title:f.querySelector('#manual-title').value.trim(),day:day?Number(day):null,month:month?Number(month):null,historic_year:f.querySelector('#manual-year').value.trim()||null,kind:f.querySelector('#manual-kind').value.trim()||null,evidence:f.querySelector('#manual-evidence').value.trim()||null,notes:f.querySelector('#manual-notes').value.trim(),created_by:me.id};
 const {error}=await db.from('archive_manual_proposals').insert(payload);if(error)notify('Error en desar: '+error.message,'error');else{notify('Proposta creada correctament.','ok');await loadData()}}}
+window.__archiveLoginHandlerReady=true;
 $('login-form').onsubmit=async e=>{e.preventDefault();if(!db){notify('No s’ha pogut carregar el motor d’autenticació. Prova amb un navegador diferent o desactiva temporalment bloquejadors per aquesta pàgina.','error');return}
 const email=$('email').value.trim(),password=$('password').value,b=$('password-login');b.disabled=true;notify('Comprovant les credencials…','ok');
 try{
-const {error}=await db.auth.signInWithPassword({email,password});
+window.__archivePasswordRecovery=false;const {error}=await db.auth.signInWithPassword({email,password});
 if(error){notify('No s’ha pogut iniciar sessió: '+error.message,'error');return}
 notify('Identificació correcta. Carregant l’arxiu…','ok');await checkAccess();
 }catch(err){notify('Error d’accés: '+(err?.message||'Error desconegut'),'error')}finally{b.disabled=false}
@@ -250,7 +277,7 @@ let searchDebounce; $('search').oninput=()=>{clearTimeout(searchDebounce);search
 $('month-filter').onchange=()=>{page=0;loadData()};
 if(db){let recovering=false;
 db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){if(window.__archivePasswordRecovery)return;recovering=true;$('dashboard').hidden=true;$('login').hidden=false;$('login-form').hidden=true;$('set-password-form').hidden=false;$('session-actions').hidden=true;notify('Enllaç verificat. Ara pots establir una contrasenya.','ok');return}
-if(session&&!recovering&&!window.__archivePasswordRecovery&&$('login').hidden===false)setTimeout(checkAccess,0)});
+if(session&&!window.__archivePasswordRecovery&&$('login').hidden===false)setTimeout(checkAccess,0)});
 checkAccess()}
 </script>
 </body>
