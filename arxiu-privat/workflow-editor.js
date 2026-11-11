@@ -46,7 +46,7 @@ function showMeta(d,record,ref,origin){
  if(ref.workflow_state)chips.append(WF.tag(ref.workflow_state,ref.workflow_state==='Descartat'?'danger':''));
  if(record.priority)chips.append(WF.tag('Prioritat '+record.priority,record.priority==='Alta'?'warn':'neutral'));
  d.append(chips);
- const source=section(d,'Informació i fonts originals');
+ const source=section(d,'Dades originals del registre');
  if(record.day&&record.month&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Data anual',WF.itemDate(record));
  if(record.historic_year&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Any històric',record.historic_year);
  if(record.status)textRow(source,'Classificació inicial',record.status);
