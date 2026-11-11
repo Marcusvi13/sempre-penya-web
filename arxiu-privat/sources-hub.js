@@ -39,8 +39,9 @@ async function documentCard(parent,source,alive,canUpload=true){
  text(card,'Bibliografia',source.bibliography);
  if(source.storage_path){
   const pdf=(source.kind==='PDF')||/\.pdf$/i.test(source.original_filename||'');
+  const image=/\.(jpe?g|png|webp)$/i.test(source.original_filename||'');
   card.append(el('p','source-available','Document disponible al repositori privat'));
-  const btn=el('button','source-file-button',pdf?'Visualitza el PDF':'Descarrega el Word');
+  const btn=el('button','source-file-button',pdf?'Visualitza el PDF':image?'Visualitza la imatge':'Descarrega el Word o document');
   btn.type='button';const preview=el('div','document-preview');
   btn.onclick=async()=>{
    btn.disabled=true;
@@ -58,7 +59,9 @@ async function documentCard(parent,source,alive,canUpload=true){
    const form=el('form','source-upload-original');
    const label=el('label','','Selecciona el document original');
    const file=el('input');file.type='file';file.required=true;
-   file.accept=/\.docx?$/i.test(source.original_filename||'')?'.doc,.docx':'.pdf,.doc,.docx';
+   file.accept=/\.(jpe?g|png|webp)$/i.test(source.original_filename||'')?
+     '.jpg,.jpeg,.png,.webp':/\.docx?$/i.test(source.original_filename||'')?
+     '.doc,.docx':'.pdf';
    label.append(file);
    const btn=el('button','','Desa i vincula el fitxer original');btn.type='submit';
    const feedback=el('p','material-feedback');feedback.hidden=true;
