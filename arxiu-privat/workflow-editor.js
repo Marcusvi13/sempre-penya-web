@@ -223,7 +223,6 @@ async function renderEventEditor(container,record,origin,seq){
     if(error)throw error;if(!data?.length)throw new Error('La proposta s’ha modificat. Torna-la a obrir.');
    }
    await WF.afterSaved('Revisió editorial desada. L’original no s’ha modificat.');
-   loadStats();
   }catch(e){WF.showError('No s’ha pogut desar la revisió: '+explainError(e));submit.disabled=false;}
  };
 }
@@ -244,9 +243,10 @@ async function fillCalendarSuggestions(card,record,search,seq){
  });
 }
 async function renderPersonEditor(container,person,seq){
- const {data:existing,error}=await db.from('archive_people_reviews').select('*').eq('person_id',person.id).maybeSingle();
+ const {data:initialReview,error}=await db.from('archive_people_reviews').select('*').eq('person_id',person.id).maybeSingle();
  if(error){if(current(seq))noticeBox(container,'No es pot consultar la revisió: '+error.message);return}
  if(!current(seq))return;
+ let existing=initialReview;
  const f=mk('form','editor-card');
  f.innerHTML='<h4>Selecció de persones</h4><label for="person-decision">Decisió</label>'+
   '<select id="person-decision" required><option value="">— Tria una decisió —</option>'+
@@ -275,7 +275,7 @@ async function renderPersonEditor(container,person,seq){
    }
    notify('Decisió sobre la persona desada.','ok');
    const result=await db.from('archive_people_reviews').select('*').eq('person_id',person.id).maybeSingle();
-   if(!result.error&&result.data)existing?Object.assign(existing,result.data):Object.assign(person,{_review:result.data});
+   if(!result.error&&result.data)existing=result.data;
    button.disabled=false;
   }catch(err){WF.showError('Error en desar: '+explainError(err));button.disabled=false}
  };
