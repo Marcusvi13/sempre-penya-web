@@ -62,7 +62,7 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 </section>
 </main>
 <footer>Arxiu Històric de la Penya · Eina editorial privada, separada del feed de Sempre Penya</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/dist/umd/supabase.js" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar el servei d’identificació. Torna a carregar la pàgina.'"></script>
 <script>
 'use strict';
 const URL='https://lfmudiewyupfvtmlgpse.supabase.co';
@@ -124,9 +124,9 @@ const payload={title:f.querySelector('#manual-title').value.trim(),day:day?Numbe
 const {error}=await db.from('archive_manual_proposals').insert(payload);if(error)notify('Error en desar: '+error.message,'error');else{notify('Proposta creada correctament.','ok');await loadData()}}}
 $('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim(),password=$('password').value;const b=$('password-login');b.disabled=true;
 const {error}=await db.auth.signInWithPassword({email,password});b.disabled=false;if(error)notify('No s’ha pogut iniciar sessió: '+error.message,'error');else{notify('');await checkAccess()}};
-$('forgot-password').onclick=async()=>{if(!db)return;const email=$('email').value.trim();if(!email||!$('email').checkValidity()){notify('Indica primer el teu correu electrònic.','error');return}
-const btn=$('forgot-password');btn.disabled=true;const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://semprepenya.cat/arxiu-privat/'});btn.disabled=false;
-notify(error?'No s’ha pogut enviar el correu: '+error.message:'Si el compte existeix, rebràs un correu per crear o recuperar la contrasenya. Comprova també el correu brossa.',error?'error':'ok')};
+$('forgot-password').onclick=async()=>{if(!db){notify('No s’ha pogut carregar el servei d’identificació. Actualitza la pàgina.','error');return}const email=$('email').value.trim();if(!email||!$('email').checkValidity()){notify('Indica primer el teu correu electrònic.','error');return}
+const btn=$('forgot-password');btn.disabled=true;try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://semprepenya.cat/arxiu-privat/'});
+notify(error?'No s’ha pogut enviar el correu: '+error.message:'Si el compte existeix, rebràs un correu per crear o recuperar la contrasenya. Comprova també el correu brossa.',error?'error':'ok')}catch(err){notify('Error de connexió: '+(err?.message||'Desconegut'),'error')}finally{btn.disabled=false}};
 $('set-password-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const password=$('new-password').value,confirm=$('confirm-password').value;
 if(password.length<12||password!==confirm){notify('La contrasenya ha de tenir almenys 12 caràcters i les dues entrades han de coincidir.','error');return}
 const btn=$('set-password-form').querySelector('button');btn.disabled=true;const {error}=await db.auth.updateUser({password});btn.disabled=false;
