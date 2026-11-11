@@ -27,6 +27,7 @@ function go(target){
  const next=Math.max(0,Math.min(last,Math.trunc(Number(target))));
  if(!Number.isFinite(next)||next===page)return;
  page=next;selected=null;
+ draw();
  loadData();
  // Retorn a l'inici de la llista quan es canvia de pàgina.
  get('list-label')?.scrollIntoView({behavior:'smooth',block:'start'});
