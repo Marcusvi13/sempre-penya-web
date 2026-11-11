@@ -231,12 +231,20 @@ renderRows=function(){
 };
 renderDetail=function(record){
  if(isUnified())return wf.showRecord(record);
- if(view==='archive_calendar_baseline'){
-  if(record)return wf.showRecord({origin:'calendar',record_id:record.id,title:record.title,item_key:'calendar:'+record.id,day:record.day,month:record.month,historic_year:record.historic_year});
-  return originalRenderDetail(record);
+ // La mateixa fitxa i les mateixes fonts tant si accedim des de la Safata,
+ // el Calendari original, Persones o la Biblioteca.
+ const origins={
+  archive_calendar_baseline:'calendar',archive_proposals:'proposal',
+  archive_people:'person',archive_sources:'source',archive_chapters:'chapter',
+  archive_dossiers:'dossier',archive_doubts:'doubt',archive_reference_catalogue:'catalogue',
+  archive_manual_proposals:'manual'
+ };
+ if(record&&origins[view]){
+  return wf.showRecord({origin:origins[view],record_id:String(record.id),
+   title:record.title||record.name,item_key:origins[view]+':'+record.id,
+   day:record.day,month:record.month,historic_year:record.historic_year});
  }
- originalRenderDetail(record);
- if(record)wf.showExisting(record,view);
+ return originalRenderDetail(record);
 };
 
 loadStats=async function(){
