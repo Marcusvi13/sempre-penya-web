@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const get=id=>document.getElementById(id);
-const queue='archive_review_queue',valid='archive_validated_calendar',history='archive_change_log';
+const queue='archive_review_queue',valid='archive_validated_calendar',history='archive_change_log',globalSearch='archive_global_search';
 views[queue]={
  title:'Safata de revisió',
  description:'Totes les efemèrides inicials, propostes documentals i aportacions. Les decisions no alteren les fonts originals.',
@@ -18,6 +18,11 @@ views[history]={
  title:'Historial de canvis',
  description:'Registre automàtic i només de lectura de les decisions i aportacions.',
  fields:'id,entity_type,entity_id,change_type,changed_at,performed_by'
+};
+views[globalSearch]={
+ title:'Cerca transversal',
+ description:'Cerca simultàniament al Calendari, propostes, persones, fonts, capítols, dossiers, dubtes i catàleg documental. Escriu dos caràcters com a mínim.',
+ fields:'item_key,origin,record_id,title,day,month,historic_year,kind,section'
 };
 views.archive_dossiers={
  title:'Dossiers',
@@ -36,6 +41,7 @@ const mainNavigation=[
 ];
 const subdivisions={
  library:[
+  {title:'Cerca transversal',view:globalSearch},
   {title:'Fonts',view:'archive_sources'},
   {title:'Capítols',view:'archive_chapters'},
   {title:'Dossiers',view:'archive_dossiers'},
@@ -45,7 +51,7 @@ const subdivisions={
   {title:'Historial',view:history}]
 };
 const labelOrigin=o=>({calendar:'Calendari original',proposal:'Proposta documental',manual:'Aportació pròpia'})[o]||o;
-const isUnified=()=>view===queue||view===valid;
+const isUnified=()=>view===queue||view===valid||view===globalSearch;
 const slugSafe=t=>String(t||'').replace(/[%_,()]/g,'').trim();
 const isEditor=()=>role==='owner'||role==='editor';
 const itemDate=r=>r.day&&r.month?String(r.day).padStart(2,'0')+'/'+String(r.month).padStart(2,'0')+(r.historic_year?' · '+r.historic_year:''):(r.historic_year?'Any '+r.historic_year+' · sense dia i mes':'Data pendent');
@@ -114,7 +120,7 @@ function groupFor(v){
  if(v==='archive_calendar_baseline')return 'calendar';
  if(v===valid)return 'validated';
  if(v==='archive_people')return 'people';
- if(['archive_sources','archive_chapters','archive_dossiers','archive_reference_catalogue'].includes(v))return 'library';
+ if(['archive_sources','archive_chapters','archive_dossiers','archive_reference_catalogue',globalSearch].includes(v))return 'library';
  if(['archive_doubts',history].includes(v))return 'tracking';
  if(v==='archive_manual_proposals')return 'new';
  return 'review';
@@ -132,7 +138,7 @@ function syncUI(){
  exportBtn.hidden=view!==valid;
  newBtn.hidden=view==='archive_manual_proposals';
  get('month-filter').hidden=![queue,valid,'archive_calendar_baseline','archive_proposals','archive_reference_catalogue','archive_manual_proposals'].includes(view);
- get('search').placeholder=view===history?'Cerca un identificador de registre…':'Cerca un títol, una persona o una paraula…';
+ get('search').placeholder=view===history?'Cerca un identificador de registre…':view===globalSearch?'Cerca a tot l’arxiu (mínim 2 caràcters)…':'Cerca un títol, una persona o una paraula…';
  get('search').setAttribute('aria-label','Cerca registres');
 }
 setView=function(next){
@@ -141,7 +147,7 @@ setView=function(next){
 };
 loadData=async function(){
  syncUI();
- if(![queue,valid,history].includes(view))return originalLoadData();
+ if(![queue,valid,history,globalSearch].includes(view))return originalLoadData();
  const seq=++loadSeq;
  selected=null;
  const v=views[view];
@@ -151,8 +157,16 @@ loadData=async function(){
  get('detail').textContent='Selecciona un registre.';
  let q=db.from(view).select(v.fields,{count:'exact'});
  const term=slugSafe(get('search').value);
+ if(view===globalSearch&&term.length<2){
+  rows=[];total=0;get('results').textContent='Escriu almenys 2 caràcters al cercador per consultar tot l’arxiu.';
+  get('detail').textContent='Les col·leccions originals no es modifiquen amb aquesta cerca.';
+  get('page-info').textContent='Cerca transversal';
+  get('prev').disabled=true;get('next').disabled=true;return;
+ }
  if(term)q=q.ilike(view===history?'entity_id':'title','%'+term+'%');
- if(view!==history){
+ if(view===globalSearch){
+  q=q.order('section',{ascending:true}).order('title',{ascending:true});
+ }else if(view!==history){
   const m=get('month-filter').value;if(m)q=q.eq('month',Number(m));
   if(view===queue){
    const origin=get('workflow-origin').value,status=get('workflow-status').value,priority=get('workflow-priority').value;
@@ -174,7 +188,7 @@ loadData=async function(){
  else get('detail').innerHTML='<div class="empty">Selecciona un registre per obrir-ne la fitxa.</div>';
 };
 renderRows=function(){
- if(![queue,valid,history].includes(view))return originalRenderRows();
+ if(![queue,valid,history,globalSearch].includes(view))return originalRenderRows();
  const list=get('results');list.replaceChildren();
  if(!rows.length){list.innerHTML='<div class="empty">No hi ha registres amb aquests filtres.</div>';return}
  rows.forEach((r,i)=>{
@@ -186,6 +200,7 @@ renderRows=function(){
   const meta=document.createElement('small');
   meta.textContent=view===history
    ?(r.change_type+' · '+new Date(r.changed_at).toLocaleString('ca-ES'))
+   :view===globalSearch?(r.section+' · '+(r.day&&r.month?itemDate(r):r.kind||'Fitxa documental'))
    :itemDate(r)+' · '+labelOrigin(r.origin);
   button.append(meta);
   if(view===queue){
