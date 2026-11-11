@@ -42,19 +42,21 @@ function makeTextRow(parent,value,label){
 async function openPrivateFile(path,fileName,mime='',preview=null){
  if(!path)throw new Error('Aquest document no està pujat al repositori privat');
  const isPdf=/\.pdf$/i.test(fileName||'')||mime==='application/pdf';
+ const isImage=/\.(jpe?g|png|webp)$/i.test(fileName||'')||/^image\/(jpeg|png|webp)$/.test(mime);
  const store=db.storage.from(BUCKET);
- if(isPdf&&preview){
+ if((isPdf||isImage)&&preview){
   const {data,error}=await store.createSignedUrl(path,300);
   if(error||!data?.signedUrl)throw error||new Error('No s’ha pogut obtenir l’accés temporal');
   if(preview.childNodes.length){preview.replaceChildren();return}
-  const frame=create('iframe','document-pdf-frame');
-  frame.title='Previsualització del PDF: '+fileName;
+  const frame=create(isPdf?'iframe':'img',isPdf?'document-pdf-frame':'document-image-frame');
+  if(isPdf)frame.title='Previsualització del PDF: '+fileName;
+  else frame.alt='Previsualització de la imatge: '+fileName;
   frame.src=data.signedUrl;
   frame.setAttribute('loading','lazy');
   frame.setAttribute('referrerpolicy','no-referrer');
   const close=create('button','document-close','Tanca la previsualització');
   close.type='button';close.onclick=()=>preview.replaceChildren();
-  const open=create('a','material-link','Obre el PDF en una pestanya');
+  const open=create('a','material-link',isPdf?'Obre el PDF en una pestanya':'Obre la imatge en una pestanya');
   open.href=data.signedUrl;open.target='_blank';open.rel='noopener noreferrer';
   preview.append(close,open,frame);
   return;
@@ -122,7 +124,8 @@ async function renderMaterials(container,kind,recordId,isCurrent=()=>true,option
     row.append(a);
    }else if(item.file_path){
     const isPdf=/\.pdf$/i.test(item.file_name||'')||item.mime_type==='application/pdf';
-    const b=create('button','material-open',isPdf?'Visualitza el PDF':'Descarrega el document privat');
+    const isImage=/\.(jpe?g|png|webp)$/i.test(item.file_name||'');
+    const b=create('button','material-open',isPdf?'Visualitza el PDF':isImage?'Visualitza la imatge':'Descarrega el document privat');
     b.type='button';
     const preview=create('div','document-preview');
     b.onclick=async()=>{
