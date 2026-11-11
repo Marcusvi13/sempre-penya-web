@@ -36,3 +36,20 @@ En producció, cal assegurar que el correu OTP/lligam màgic funcioni i que la r
 7. Confirmar feed, calendari, APK i radars del Sempre Penya sense canvis.
 
 Aquest fitxer no inclou cap clau secreta, contrasenya ni token de servei.
+
+## Proves de seguretat de base de dades (11/11/2026)
+
+Proves de lectura sense modificar registres:
+
+- Sessió simulada amb el UUID del membre `owner`: accés a 1.321 efemèrides i 156 propostes.
+- Sessió simulada amb UUID no membre: zero registres visibles a calendari, propostes i membres (RLS).
+- Rol `anon`: denegació SQL `permission denied` de SELECT del calendari (sense concessió de lectura).
+- Permisos de columna: `authenticated` pot actualitzar `archive_proposals.decision` i `archive_doubts.editorial_notes`, però no `archive_doubts.title`.
+
+Aquestes proves **no** substitueixen una prova de navegador de l'inici de sessió i de les funcionalitats d'edició. No hi ha cap test automatitzat end-to-end ni confirmació d'enviament d'OTP real.
+
+## Limitacions intencionades
+
+- No s'incorporen dades al calendari original automàticament després d'aprovar una proposta.
+- Les decisions de revisió són metadades editorials i la seva publicació serà un procés separat.
+- Encara cal verificar redirecció d'autenticació abans de fer merge a `main`.
