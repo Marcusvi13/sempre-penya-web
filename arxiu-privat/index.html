@@ -62,6 +62,52 @@ footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 </section>
 </main>
 <footer>Arxiu Històric de la Penya · Eina editorial privada, separada del feed de Sempre Penya</footer>
+<script>
+/* Recuperació independent: no depèn que es carregui el SDK ni que arrenqui el gestor. */
+(function(){
+  const button=document.getElementById('forgot-password');
+  const notice=document.getElementById('notice');
+  const emailInput=document.getElementById('email');
+  function show(message,error){
+    notice.textContent=message;
+    notice.className=error?'error':'ok';
+    notice.hidden=false;
+    notice.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  button.addEventListener('click',async function(){
+    const email=emailInput.value.trim();
+    show('Comprovant la sol·licitud…',false);
+    if(!email || !emailInput.checkValidity()){
+      show('Primer has d’escriure un correu electrònic vàlid al camp superior.',true);
+      emailInput.focus();
+      return;
+    }
+    button.disabled=true;
+    try{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),15000);
+      let response;
+      try{
+        response=await fetch('https://lfmudiewyupfvtmlgpse.supabase.co/auth/v1/recover?redirect_to='+encodeURIComponent('https://semprepenya.cat/arxiu-privat/'),{
+          method:'POST',
+          headers:{'apikey':'sb_publishable_7oDsnoUAIq1jIVi_0-xWHg_bUVAclgI','Content-Type':'application/json'},
+          body:JSON.stringify({email}),
+          signal:controller.signal
+        });
+      }finally{clearTimeout(timeout)}
+      if(!response.ok){
+        const body=await response.json().catch(()=>({}));
+        const reason=body.msg||body.message||body.error_description||body.error||response.statusText;
+        show('Supabase ha rebut la petició però ha retornat un error ('+response.status+'): '+reason,true);
+        return;
+      }
+      show('Sol·licitud acceptada per Supabase. Comprova la safata d’entrada i el correu brossa. Si no arriba, revisarem el servei de correu.',false);
+    }catch(error){
+      show('No s’ha pogut contactar amb Supabase: '+(error.name==='AbortError'?'temps d’espera esgotat':error.message)+'.',true);
+    }finally{button.disabled=false}
+  });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/dist/umd/supabase.js" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar el servei d’identificació. Torna a carregar la pàgina.'"></script>
 <script>
 'use strict';
@@ -124,9 +170,7 @@ const payload={title:f.querySelector('#manual-title').value.trim(),day:day?Numbe
 const {error}=await db.from('archive_manual_proposals').insert(payload);if(error)notify('Error en desar: '+error.message,'error');else{notify('Proposta creada correctament.','ok');await loadData()}}}
 $('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim(),password=$('password').value;const b=$('password-login');b.disabled=true;
 const {error}=await db.auth.signInWithPassword({email,password});b.disabled=false;if(error)notify('No s’ha pogut iniciar sessió: '+error.message,'error');else{notify('');await checkAccess()}};
-$('forgot-password').onclick=async()=>{if(!db){notify('No s’ha pogut carregar el servei d’identificació. Actualitza la pàgina.','error');return}const email=$('email').value.trim();if(!email||!$('email').checkValidity()){notify('Indica primer el teu correu electrònic.','error');return}
-const btn=$('forgot-password');btn.disabled=true;try{const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://semprepenya.cat/arxiu-privat/'});
-notify(error?'No s’ha pogut enviar el correu: '+error.message:'Si el compte existeix, rebràs un correu per crear o recuperar la contrasenya. Comprova també el correu brossa.',error?'error':'ok')}catch(err){notify('Error de connexió: '+(err?.message||'Desconegut'),'error')}finally{btn.disabled=false}};
+// El botó de recuperació es gestiona en un script independent abans de carregar la biblioteca.
 $('set-password-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const password=$('new-password').value,confirm=$('confirm-password').value;
 if(password.length<12||password!==confirm){notify('La contrasenya ha de tenir almenys 12 caràcters i les dues entrades han de coincidir.','error');return}
 const btn=$('set-password-form').querySelector('button');btn.disabled=true;const {error}=await db.auth.updateUser({password});btn.disabled=false;
