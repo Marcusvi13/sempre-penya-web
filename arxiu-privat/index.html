@@ -30,6 +30,7 @@ textarea{min-height:95px;resize:vertical}input:focus,select:focus,textarea:focus
 footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 @media(max-width:750px){.workspace,.fieldrow{grid-template-columns:1fr}.mast .shell{align-items:flex-start;flex-direction:column}.shell{padding:16px}.scroll{max-height:330px}}
 </style>
+<link rel="stylesheet" href="workflow.css?v=2">
 </head>
 <body>
 <header class="mast"><div class="shell"><div><div class="eyebrow">Espai de treball · No públic</div><h1>Arxiu Històric de la Penya</h1><p>Recerca, revisió i memòria verd-i-negra</p></div><div class="inline" id="session-actions" hidden><span id="identity"></span><button class="ghost" id="logout">Surt</button></div></div></header>
@@ -308,5 +309,8 @@ db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){if(w
 if(session&&!window.__archivePasswordRecovery&&$('login').hidden===false)setTimeout(checkAccess,0)});
 checkAccess()}
 </script>
+<script src="workflow.js?v=2"></script>
+<script src="workflow-editor.js?v=2"></script>
+<script src="workflow-relations.js?v=2"></script>
 </body>
 </html>
