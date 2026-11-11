@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Arxiu Històric · Penya — Espai privat</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#172923;background:#f2f5f2;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
+[hidden]{display:none!important}.shell{max-width:1250px;margin:auto;padding:24px}.mast{background:#064a36;color:white;padding:24px 0;border-bottom:5px solid #d7b66d}
+.mast .shell{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-block:0}.mast h1{font-size:clamp(24px,3vw,34px);margin:0}.mast p{margin:6px 0 0;color:#c2e1d3}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:800;color:#a4cfbc}
+button.primary{background:#076545;border:1px solid #076545;color:white}button,.buttonlike{border:1px solid #c5d4cb;border-radius:9px;padding:9px 13px;background:#fff;color:#164331;font-weight:650}
+button:hover:not(:disabled){filter:brightness(.96)}button.primary:hover{filter:brightness(1.08)}button.ghost{background:transparent;color:inherit;border-color:#82a895}
+.card{background:#fff;border:1px solid #dae5dc;border-radius:15px;padding:20px;box-shadow:0 3px 15px #002b1810;margin-bottom:18px}
+.login{max-width:510px;margin:44px auto}.login h2{margin-top:0}.muted{color:#586c61;font-size:14px;line-height:1.5}label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+input,select,textarea{border:1px solid #b5c9bc;border-radius:8px;padding:10px;width:100%;background:#fff;color:#1b3025}
+textarea{min-height:95px;resize:vertical}input:focus,select:focus,textarea:focus{outline:2px solid #16865a;outline-offset:1px}
+.inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.inline>*{flex:0 0 auto}.inline input,.inline select{flex:1 1 180px}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px}.stat{background:#fff;border:1px solid #d7e4da;border-radius:12px;padding:18px}.stat b{font-size:28px;display:block;color:#06503a}.stat span{color:#607368;font-size:13px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 22px}.tabs button.active{background:#07563c;color:#fff;border-color:#07563c}
+.items{display:grid;gap:9px}.item{border:1px solid #dbe6dd;border-radius:10px;padding:14px;background:white;text-align:left;width:100%}
+.item strong{display:block;margin-bottom:5px}.item small{color:#587064}.item.active{border-color:#11734d;background:#f0faf4}
+.workspace{display:grid;grid-template-columns:minmax(250px,.95fr) minmax(340px,1.35fr);gap:18px}.scroll{max-height:560px;overflow:auto}.detail h3{margin-top:0}
+.pill{display:inline-block;padding:3px 8px;border-radius:99px;background:#e9f2eb;color:#20513c;font-size:12px;font-weight:700;margin-right:5px}
+#notice{padding:12px 15px;border-radius:9px;background:#fff8da;border:1px solid #ead58e;margin-bottom:15px;color:#5b4713}
+#notice.error{background:#ffeded;border-color:#e6b1af;color:#8c2828}#notice.ok{background:#e6f7eb;border-color:#b6dac2;color:#17663f}
+.fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}.empty{padding:22px;color:#64766b;text-align:center}
+footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
+@media(max-width:750px){.workspace,.fieldrow{grid-template-columns:1fr}.mast .shell{align-items:flex-start;flex-direction:column}.shell{padding:16px}.scroll{max-height:330px}}
+</style>
+</head>
+<body>
+<header class="mast"><div class="shell"><div><div class="eyebrow">Espai de treball · No públic</div><h1>Arxiu Històric de la Penya</h1><p>Recerca, revisió i memòria verd-i-negra</p></div><div class="inline" id="session-actions" hidden><span id="identity"></span><button class="ghost" id="logout">Surt</button></div></div></header>
+<main class="shell">
+<div id="notice" role="status" hidden></div>
+<section id="login" class="card login">
+<h2>Accés a l'arxiu</h2><p class="muted">Només els membres autoritzats poden consultar o editar el material històric. Identifica't amb el correu de la invitació.</p>
+<form id="login-form"><label for="email">Correu electrònic</label><input id="email" type="email" autocomplete="email" required placeholder="nom@exemple.cat">
+<div class="inline" style="margin-top:16px"><button type="submit" class="primary" id="send-link">Envia'm un enllaç d'accés</button></div></form>
+<p class="muted">Si el correu conté un codi de sis dígits en lloc d'un enllaç, introdueix-lo aquí:</p>
+<form id="code-form" class="inline"><input id="otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="Codi de 6 dígits" aria-label="Codi de verificació"><button type="submit">Verifica el codi</button></form>
+<p class="muted">El correu no dona accés automàtic a qualsevol persona: cal constar també a la llista de membres de l'arxiu.</p>
+</section>
+<section id="dashboard" hidden>
+<div class="statgrid" id="stats"></div>
+<div class="tabs" role="navigation" aria-label="Apartats de l'arxiu">
+<button data-view="archive_calendar_baseline" class="active">Calendari</button>
+<button data-view="archive_proposals">Propostes</button>
+<button data-view="archive_people">Persones</button>
+<button data-view="archive_chapters">Capítols</button>
+<button data-view="archive_doubts">Dubtes</button>
+<button data-view="archive_sources">Fonts</button>
+<button data-view="archive_reference_catalogue">Catàleg</button>
+<button data-view="archive_manual_proposals">Aportacions pròpies</button>
+</div>
+<div class="card"><div class="inline"><input id="search" placeholder="Cerca per títol, nom o descripció…" aria-label="Cerca"><select id="month-filter" aria-label="Mes"><option value="">Tots els mesos</option><option value="1">Gener</option><option value="2">Febrer</option><option value="3">Març</option><option value="4">Abril</option><option value="5">Maig</option><option value="6">Juny</option><option value="7">Juliol</option><option value="8">Agost</option><option value="9">Setembre</option><option value="10">Octubre</option><option value="11">Novembre</option><option value="12">Desembre</option></select><button id="reload">Actualitza</button></div><p id="view-description" class="muted"></p></div>
+<div class="workspace"><section class="card"><div class="inline" style="justify-content:space-between"><strong id="list-label">Registres</strong><small id="page-info"></small></div><div class="items scroll" id="results"></div><div class="inline" style="justify-content:space-between;margin-top:14px"><button id="prev">Anterior</button><button id="next">Següent</button></div></section>
+<section class="card detail" id="detail"><div class="empty">Selecciona un registre per veure'n el contingut i les fonts.</div></section></div>
+</section>
+</main>
+<footer>Arxiu Històric de la Penya · Eina editorial privada, separada del feed de Sempre Penya</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/dist/umd/supabase.min.js"></script>
+<script>
+'use strict';
+const URL='https://lfmudiewyupfvtmlgpse.supabase.co';
+const KEY='sb_publishable_7oDsnoUAIq1jIVi_0-xWHg_bUVAclgI'; // clau pública: l'accés real el controla RLS
+const db=window.supabase?.createClient(URL,KEY,{auth:{flowType:'implicit',autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+const $=id=>document.getElementById(id);
+const views={
+archive_calendar_baseline:{title:'Efemèrides',description:'Calendari inicial: els registres originals no es modifiquen; les decisions editorials es guarden per separat.',fields:'id,title,day,month,historic_year,kind,editorial_decision_original,notes_original,source_url'},
+archive_proposals:{title:'Propostes',description:'Revisa possibles incorporacions, correccions i duplicats. Les decisions no alteren directament el calendari original.',fields:'id,title,day,month,historic_year,kind,status,decision,notes,evidence,version,priority,source_label'},
+archive_people:{title:'Persones',description:'Jugadors, jugadores i personalitats documentades.',fields:'id,name,category,birth_label,original_decision,notes_original'},
+archive_chapters:{title:'Capítols',description:'Capítols del material històric incorporat al fons de recerca.',fields:'id,title,ordinal,printed_page,thematic_type,synopsis'},
+archive_doubts:{title:'Dubtes',description:'Punts que requereixen contrast o verificació històrica.',fields:'id,title,explanation,priority,status,editorial_notes'},
+archive_sources:{title:'Fonts',description:'Referències bibliogràfiques i documentals.',fields:'id,title,kind,author,document_date,bibliography'},
+archive_reference_catalogue:{title:'Catàleg de referència',description:'Fons de consulta històrica ampliat. No equival al calendari seleccionat.',fields:'id,title,day,month,historic_year,kind'},
+archive_manual_proposals:{title:'Aportacions pròpies',description:'Afegeix noves propostes sense tocar les dades originals.',fields:'id,title,day,month,historic_year,kind,status,decision,evidence,notes,reviewed'}
+};
+let view='archive_calendar_baseline',page=0,selected=null,rows=[],total=0,role=null,me=null,loadSeq=0;
+const limit=30;
+function notify(message,type=''){const n=$('notice');n.textContent=message;n.className=type;n.hidden=!message}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function label(r){return r.title||r.name||r.id||'Sense títol'}
+function prettyKey(k){return ({title:'Títol',name:'Nom',day:'Dia',month:'Mes',historic_year:'Any històric',kind:'Tipus',status:'Estat',decision:'Decisió',notes:'Notes',notes_original:'Notes originals',evidence:'Evidències',source_url:'Font original',source_label:'Font',bibliography:'Bibliografia',category:'Categoria',birth_label:'Naixement',priority:'Prioritat',printed_page:'Pàgina',synopsis:'Sinopsi',explanation:'Explicació',editorial_notes:'Notes editorials',editorial_decision_original:'Decisió original',original_decision:'Decisió original',document_date:'Data documental',author:'Autor',reviewed:'Revisat',version:'Versió',id:'Identificador'})[k]||k}
+function displayValue(v){if(v===null||v===undefined||v==='')return '—';if(typeof v==='boolean')return v?'Sí':'No';return String(v)}
+async function checkAccess(){if(!db){notify('No s’ha pogut carregar el client de connexió. Revisa la connexió a Internet.','error');return}
+const {data:{session},error}=await db.auth.getSession();if(error){notify(error.message,'error');return}
+if(!session){$('login').hidden=false;$('dashboard').hidden=true;$('session-actions').hidden=true;return}
+const {data,error:memberErr}=await db.from('archive_members').select('role').eq('user_id',session.user.id).maybeSingle();
+if(memberErr||!data){await db.auth.signOut();notify('Aquest compte no és membre autoritzat de l’arxiu.','error');return}
+role=data.role;me=session.user;$('login').hidden=true;$('dashboard').hidden=false;$('session-actions').hidden=false;$('identity').textContent=(me.email||'Usuari')+' · '+role;
+await Promise.all([loadStats(),loadData()])}
+async function loadStats(){const tables=['archive_calendar_baseline','archive_proposals','archive_people','archive_chapters','archive_doubts','archive_sources','archive_reference_catalogue'];const counts=await Promise.all(tables.map(async t=>{const {count,error}=await db.from(t).select('id',{count:'exact',head:true});return {name:views[t].title,count:error?'—':count}}));
+$('stats').replaceChildren();counts.forEach(x=>{const div=document.createElement('div');div.className='stat';const b=document.createElement('b');b.textContent=x.count;const s=document.createElement('span');s.textContent=x.name;div.append(b,s);$('stats').append(div)})}
+function setView(next){view=next;page=0;selected=null;$('search').value='';$('month-filter').value='';document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('month-filter').hidden=!['archive_calendar_baseline','archive_proposals','archive_reference_catalogue','archive_manual_proposals'].includes(view);loadData()}
+async function loadData(){const seq=++loadSeq;const v=views[view];$('view-description').textContent=v.description;$('list-label').textContent=v.title;$('results').textContent='Carregant…';$('detail').innerHTML='<div class="empty">Selecciona un registre.</div>';
+let q=db.from(view).select(v.fields,{count:'exact'});const query=$('search').value.trim();
+if(query){const field=view==='archive_people'?'name':'title';q=q.ilike(field,'%'+query.replace(/[%_,()]/g,'')+'%')}
+const m=$('month-filter').value;if(m&&!$('month-filter').hidden)q=q.eq('month',Number(m));
+const order=view==='archive_chapters'?'ordinal':view==='archive_people'?'name':'title';
+q=q.order(order,{ascending:true}).range(page*limit,(page+1)*limit-1);
+const {data,error,count}=await q;if(seq!==loadSeq)return;if(error){$('results').textContent='No s’han pogut carregar les dades.';notify(error.message,'error');return}
+notify('');rows=data||[];total=count||0;renderRows();$('page-info').textContent=total+' registres · pàgina '+(page+1);
+$('prev').disabled=page===0;$('next').disabled=(page+1)*limit>=total;
+if(view==='archive_manual_proposals')renderDetail(null)}
+function renderRows(){$('results').replaceChildren();if(!rows.length){$('results').innerHTML='<div class="empty">No hi ha resultats.</div>';return}rows.forEach((r,i)=>{const b=document.createElement('button');b.className='item'+(selected===i?' active':'');const title=document.createElement('strong');title.textContent=label(r);const meta=document.createElement('small');meta.textContent=[r.historic_year,r.day&&r.month?r.day+'/'+r.month:null,r.status||r.category||r.kind].filter(Boolean).join(' · ');b.append(title,meta);b.addEventListener('click',()=>{selected=i;renderRows();renderDetail(r)});$('results').append(b)})}
+function renderDetail(r){const d=$('detail');d.replaceChildren();if(!r&&view!=='archive_manual_proposals'){d.innerHTML='<div class="empty">Selecciona un registre.</div>';return}
+if(r){const h=document.createElement('h3');h.textContent=label(r);d.append(h);for(const [k,v] of Object.entries(r)){if(k==='title'||k==='name')continue;const p=document.createElement('p');const bold=document.createElement('strong');bold.textContent=prettyKey(k)+': ';p.append(bold);if(k==='source_url'&&/^https:\/\//.test(v||'')){const a=document.createElement('a');a.href=v;a.rel='noopener noreferrer';a.target='_blank';a.textContent='Obre la font';p.append(a)}else p.append(document.createTextNode(displayValue(v)));d.append(p)}}
+if(view==='archive_proposals'&&r&&(role==='owner'||role==='editor'))editorProposal(d,r);
+if(view==='archive_doubts'&&r&&(role==='owner'||role==='editor'))editorDoubt(d,r);
+if(view==='archive_manual_proposals'&&(role==='owner'||role==='editor'))manualForm(d);
+}
+function editorProposal(d,r){const f=document.createElement('form');f.innerHTML='<hr><h4>Revisió editorial</h4><label for="decision">Decisió</label><select id="decision"><option>Sense decidir</option><option>Acceptar incorporació</option><option>Ampliar registre existent</option><option>Corregir registre existent</option><option>Descartar proposta</option><option>Demanar contrast</option></select><label for="edit-notes">Notes editorials</label><textarea id="edit-notes"></textarea><button type="submit" class="primary">Desa la revisió</button>';d.append(f);f.querySelector('#decision').value=r.decision||'Sense decidir';f.querySelector('#edit-notes').value=r.notes||'';
+f.onsubmit=async e=>{e.preventDefault();const button=f.querySelector('button');button.disabled=true;const payload={decision:f.querySelector('#decision').value,notes:f.querySelector('#edit-notes').value,reviewed:true,updated_by:me.id,updated_at:new Date().toISOString(),version:r.version+1};
+const {data,error}=await db.from('archive_proposals').update(payload).eq('id',r.id).eq('version',r.version).select('id');button.disabled=false;
+if(error){notify('No s’ha pogut desar: '+error.message,'error');return}if(!data?.length){notify('El registre ha canviat en una altra sessió. Actualitza abans de desar.','error');return}notify('Revisió desada correctament.','ok');await loadData()}}
+function editorDoubt(d,r){const f=document.createElement('form');f.innerHTML='<hr><h4>Seguiment del dubte</h4><label for="doubt-status">Estat</label><input id="doubt-status"><label for="doubt-notes">Notes</label><textarea id="doubt-notes"></textarea><button type="submit" class="primary">Desa el seguiment</button>';d.append(f);f.querySelector('#doubt-status').value=r.status||'';f.querySelector('#doubt-notes').value=r.editorial_notes||'';f.onsubmit=async e=>{e.preventDefault();const {error}=await db.from('archive_doubts').update({status:f.querySelector('#doubt-status').value,editorial_notes:f.querySelector('#doubt-notes').value}).eq('id',r.id);if(error)notify(error.message,'error');else{notify('Seguiment desat.','ok');loadData()}}}
+function manualForm(d){const f=document.createElement('form');f.innerHTML='<hr><h3>Nova proposta manual</h3><p class="muted">Es guarda com a proposta pendent. No entra automàticament al calendari.</p><label for="manual-title">Títol *</label><input id="manual-title" minlength="4" required><div class="fieldrow"><div><label for="manual-day">Dia</label><input id="manual-day" type="number" min="1" max="31"></div><div><label for="manual-month">Mes</label><input id="manual-month" type="number" min="1" max="12"></div></div><label for="manual-year">Any històric</label><input id="manual-year" placeholder="1930"><label for="manual-kind">Tipus</label><input id="manual-kind" placeholder="Aniversari, debut, final…"><label for="manual-evidence">Fonts o evidències</label><textarea id="manual-evidence"></textarea><label for="manual-notes">Notes</label><textarea id="manual-notes"></textarea><button class="primary" type="submit">Crea la proposta</button>';d.append(f);
+f.onsubmit=async e=>{e.preventDefault();const day=f.querySelector('#manual-day').value,month=f.querySelector('#manual-month').value;if(Boolean(day)!==Boolean(month)){notify('Indica el dia i el mes, o deixa tots dos buits.','error');return}
+const payload={title:f.querySelector('#manual-title').value.trim(),day:day?Number(day):null,month:month?Number(month):null,historic_year:f.querySelector('#manual-year').value.trim()||null,kind:f.querySelector('#manual-kind').value.trim()||null,evidence:f.querySelector('#manual-evidence').value.trim()||null,notes:f.querySelector('#manual-notes').value.trim(),created_by:me.id};
+const {error}=await db.from('archive_manual_proposals').insert(payload);if(error)notify('Error en desar: '+error.message,'error');else{notify('Proposta creada correctament.','ok');await loadData()}}}
+$('login-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim();const b=$('send-link');b.disabled=true;
+const {error}=await db.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:'https://semprepenya.cat/arxiu-privat/'}});b.disabled=false;notify(error?'Error: '+error.message:'Si el compte existeix, rebràs un correu amb un enllaç o un codi per entrar.',error?'error':'ok')};
+$('code-form').onsubmit=async e=>{e.preventDefault();if(!db)return;const email=$('email').value.trim(),token=$('otp').value.trim();if(!email||!/^[0-9]{6}$/.test(token)){notify('Introdueix el correu i el codi de sis dígits.','error');return}
+const {error}=await db.auth.verifyOtp({email,token,type:'email'});if(error)notify(error.message,'error');else await checkAccess()};
+$('logout').onclick=async()=>{await db.auth.signOut();role=null;me=null;checkAccess()};
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+$('prev').onclick=()=>{if(page>0){page--;loadData()}};$('next').onclick=()=>{if((page+1)*limit<total){page++;loadData()}};
+$('reload').onclick=()=>{loadStats();loadData()};
+let searchDebounce; $('search').oninput=()=>{clearTimeout(searchDebounce);searchDebounce=setTimeout(()=>{page=0;loadData()},350)};
+$('month-filter').onchange=()=>{page=0;loadData()};
+if(db){db.auth.onAuthStateChange((_event,session)=>{if(session&&$('login').hidden===false)setTimeout(checkAccess,0)});checkAccess()}
+</script>
+</body>
+</html>
