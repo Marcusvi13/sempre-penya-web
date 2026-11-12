@@ -189,7 +189,11 @@ async function renderMaterials(container,kind,recordId,isCurrent=()=>true,option
   const feedback=create('p','material-feedback');
   feedback.hidden=true;
   form.append(feedback);
-  formHost.append(form);
+  // El formulari s'obre a demanda; la llista de fonts guardades continua sempre visible.
+  const disclosure=create('details','material-add-disclosure');
+  const summary=create('summary','material-add-summary','+ Afegeix un material (enllaç, PDF, Word o referència)');
+  disclosure.append(summary,form);
+  formHost.append(disclosure);
   const type=form.querySelector('#research-type');
   const titleInput=form.querySelector('#research-title');
   const urlInput=form.querySelector('#research-url');
