@@ -114,3 +114,99 @@
 
 .document-image-frame{width:100%;max-width:100%;max-height:70vh;object-fit:contain;border:1px solid #d9e7dd;border-radius:7px;background:white}
 .source-file-card{border-color:#bcd7c6}
+
+
+/* Reorganització del flux editorial: decisió primera dins del requadre verd. */
+.editorial-review-hub{
+ background:#f7fbf8;
+ border:1px solid #c9e4d1;
+ border-radius:13px;
+ padding:15px;
+ margin-top:14px;
+}
+.editorial-review-hub > .detail-section:first-child{
+ padding:0;
+ margin:0;
+ border:0;
+}
+.editorial-review-hub > .detail-section:first-child > h4{
+ font-size:17px;
+ color:#07533b;
+ margin:0 0 9px;
+}
+.editorial-review-hub > .sources-hub{
+ border:0;
+ border-top:1px solid #d5e5d9;
+ border-radius:0;
+ background:transparent;
+ margin:16px 0 0;
+ padding:14px 0 0;
+}
+.editorial-review-hub > .sources-hub > h4{font-size:15px}
+.editorial-review-hub .editor-card{
+ background:#fff;
+ margin-top:8px;
+ padding:12px;
+}
+.detail-original-info > .detail-section{margin-top:13px}
+.material-add-disclosure{
+ border:1px solid #c9dfce;
+ border-radius:10px;
+ background:#fff;
+ overflow:hidden;
+ margin-top:6px;
+}
+.material-add-summary{
+ display:list-item;
+ cursor:pointer;
+ padding:10px 12px;
+ color:#07573c;
+ font-size:13px;
+ font-weight:750;
+}
+.material-add-summary:hover{background:#edf6f0}
+.material-add-disclosure[open] > .material-add-summary{
+ border-bottom:1px solid #dbe9df;
+ background:#f3f9f5;
+}
+.material-add-disclosure > .material-form{
+ border:0;
+ padding:12px;
+ border-radius:0;
+}
+
+/* Deu registres compactes visibles sense una barra de desplaçament interna. */
+#results.items{gap:4px}
+#results .item{
+ padding:6px 9px;
+ border-radius:7px;
+ line-height:1.2;
+}
+#results .item strong{
+ font-size:13px;
+ line-height:1.25;
+ display:-webkit-box;
+ -webkit-line-clamp:1;
+ -webkit-box-orient:vertical;
+ overflow:hidden;
+ margin-bottom:2px;
+}
+#results .item small{
+ font-size:11px;
+ line-height:1.25;
+ margin:0;
+}
+#results .item .record-tag{
+ font-size:10px;
+ padding:2px 6px;
+ line-height:1.1;
+ margin:3px 3px 0 0!important;
+}
+@media(min-width:751px){
+ #results.scroll{max-height:none;overflow:visible}
+ .workspace{grid-template-columns:minmax(280px,.9fr) minmax(420px,1.5fr)}
+}
+@media(max-width:750px){
+ .editorial-review-hub{padding:11px}
+ #results.scroll{max-height:none;overflow:visible}
+}
