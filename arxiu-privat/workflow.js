@@ -94,6 +94,48 @@ nav.insertAdjacentElement('afterend',subnav);
 
 // Filtres i exportació (sense tocar el cercador i els controls existents).
 const filterBox=document.createElement('div');filterBox.id='workflow-filters';filterBox.className='workflow-filters';
+
+// Accessos ràpids que reutilitzen el filtre "Estat" existent: no creen cap flux de dades paral·lel.
+const quickBar=document.createElement('div');
+quickBar.id='archive-review-quick-tabs';
+quickBar.className='review-quick-filters';
+quickBar.setAttribute('role','group');
+quickBar.setAttribute('aria-label','Estat de la revisió editorial');
+const quickStates=[
+ {label:'Pendents',status:'Pendent'},
+ {label:'Validats',status:'Validat'},
+ {label:'Descartats',status:'Descartat'},
+ {label:'En contrast',status:'En contrast'},
+ {label:'Tots',status:''}
+];
+const quickButtons=new Map();
+quickStates.forEach(({label,status})=>{
+ const button=document.createElement('button');
+ button.type='button';
+ button.className='review-quick-filter';
+ button.textContent=label;
+ button.dataset.status=status;
+ button.onclick=()=>{
+  const select=get('workflow-status');
+  if(!select||select.value===status)return;
+  select.value=status;
+  syncQuickState();
+  page=0;
+  loadData();
+ };
+ quickButtons.set(status,button);
+ quickBar.append(button);
+});
+filterBox.append(quickBar);
+function syncQuickState(){
+ const select=get('workflow-status');
+ const state=select?.value;
+ quickButtons.forEach((button,status)=>{
+  const active=status===state;
+  button.classList.toggle('active',active);
+  button.setAttribute('aria-pressed',String(active));
+ });
+}
 const filters=[
  {id:'workflow-origin',label:'Origen',options:[
   ['','Tots els orígens'],['calendar','Calendari original'],['proposal','Propostes documentals'],['manual','Aportacions pròpies']]},
@@ -107,7 +149,7 @@ filters.forEach(spec=>{
  const box=document.createElement('div');const l=document.createElement('label');l.textContent=spec.label;l.htmlFor=spec.id;
  const s=document.createElement('select');s.id=spec.id;
  spec.options.forEach(pair=>{const op=document.createElement('option');op.value=pair[0];op.textContent=pair[1];s.append(op)});
- s.onchange=()=>{page=0;loadData()};box.append(l,s);filterBox.append(box);
+ s.onchange=()=>{if(spec.id==='workflow-status')syncQuickState();page=0;loadData()};box.append(l,s);filterBox.append(box);
 });
 // Cercadors específics de categoria i procedència: útils per separar aniversaris, debuts, partits i fonts.
 ['kind','source'].forEach(key=>{
@@ -146,6 +188,8 @@ function syncUI(){
   b.onclick=()=>setView(item.view);subnav.append(b);
  });
  const isQ=view===queue;
+ quickBar.hidden=!isQ;
+ if(isQ)syncQuickState();
  filterBox.querySelectorAll('#workflow-origin,#workflow-status,#workflow-priority,#workflow-original,#workflow-kind,#workflow-source').forEach(e=>e.parentElement.hidden=!isQ);
  exportBtn.hidden=view!==valid;
  newBtn.hidden=view==='archive_manual_proposals';

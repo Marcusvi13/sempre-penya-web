@@ -116,3 +116,13 @@ El comprovador de Supabase avisa que la protecció contra contrasenyes filtrades
 - El formulari **Afegeix un material** es presenta plegat d'entrada, amb el control natiu accessible `<details><summary>`. Les fonts ja guardades es continuen mostrant; desplegar el formulari no afecta els materials ni les decisions.
 - Modificacions exclusivament d'HTML/JavaScript/CSS dins de `arxiu-privat/`. Cap migració, dada ni canvi al Supabase públic, app, radars o feed.
 - Proves: sintaxi dels scripts; renderització simulada de la fitxa amb decisió abans de fonts i dades originals més avall; comptatge 10 per pàgina i formulari tancat per defecte. Pendent comprovació visual final en navegador real.
+
+## Accessos ràpids a la Safata de revisió (12/11/2026)
+
+- Cinc pestanyes just abans dels filtres avançats: **Pendents**, **Validats**, **Descartats**, **En contrast**, **Tots**. Són accessos ràpids al filtre existent `workflow-status`, no un altre sistema de decisions ni de dades.
+- Seleccionar-ne una torna a la primera pàgina i carrega la llista filtrada. L'estat actiu queda marcat visualment i amb `aria-pressed` per a accessibilitat.
+- Si es canvia l'estat al desplegable anterior, la selecció ràpida també s'actualitza. Els altres filtres (cerca, origen, mes, prioritat, tipus, font) continuen actius.
+- «Tots» elimina **només** el filtre d'estat; no elimina els altres criteris que l'usuari hagi introduït.
+- Les categories especials del desplegable (Sense data, Vinculat, Fusionat, etc.) continuen accessibles amb el desplegable encara que no tinguin botó ràpid.
+- Només apareixen a la `Safata de revisió`; no modifiquen ni el Calendari validat ni les dades històriques originals.
+- Prova de comportament: estat per defecte Pendents, selecció Descarts/Tots, reset de pàgina, sincronització manual i evitació de recàrrega repetida, sense error de sintaxi.

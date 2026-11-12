@@ -210,3 +210,39 @@
  .editorial-review-hub{padding:11px}
  #results.scroll{max-height:none;overflow:visible}
 }
+
+
+/* Pestanyes ràpides de decisió, només a la Safata de revisió */
+.review-quick-filters{
+ display:flex;
+ gap:7px;
+ flex-wrap:wrap;
+ align-items:center;
+ flex:0 0 100%;
+ width:100%;
+ padding-bottom:9px;
+ border-bottom:1px solid #e0eae3;
+}
+.review-quick-filter{
+ padding:7px 12px;
+ font-size:13px;
+ border-radius:999px;
+ border:1px solid #b8d2c2;
+ background:#fff;
+ color:#18543b;
+ white-space:nowrap;
+}
+.review-quick-filter.active,
+.review-quick-filter[aria-pressed="true"]{
+ background:#07563c;
+ color:#fff;
+ border-color:#07563c;
+}
+.review-quick-filter:focus-visible{
+ outline:3px solid #6dbc8b;
+ outline-offset:2px;
+}
+@media(max-width:550px){
+ .review-quick-filters{gap:5px}
+ .review-quick-filter{font-size:12px;padding:6px 9px}
+}
