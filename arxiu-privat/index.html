@@ -232,7 +232,7 @@ archive_reference_catalogue:{title:'Catàleg de referència',description:'Fons d
 archive_manual_proposals:{title:'Aportacions pròpies',description:'Afegeix noves propostes sense tocar les dades originals.',fields:'id,title,day,month,historic_year,kind,status,decision,evidence,notes,reviewed'}
 };
 let view='archive_calendar_baseline',page=0,selected=null,rows=[],total=0,role=null,me=null,loadSeq=0;
-const limit=30;
+const limit=10; // Deu registres compactes per pàgina: visibles sense desplaçament intern.
 function notify(message,type=''){const n=$('notice');n.textContent=message;n.className=type;n.hidden=!message}
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function label(r){return r.title||r.name||r.id||'Sense títol'}
