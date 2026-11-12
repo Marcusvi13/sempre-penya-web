@@ -211,6 +211,7 @@ renderRows=function(){
  rows.forEach((r,i)=>{
   const button=document.createElement('button');button.type='button';
   button.className='item'+(selected===i?' active':'');
+  button.title=view===history?(r.entity_id||''):r.title||'';
   const headline=document.createElement('strong');headline.className='record-title';
   headline.textContent=view===history?(r.entity_id+' · '+r.entity_type):r.title;
   button.append(headline);

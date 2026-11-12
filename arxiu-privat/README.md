@@ -108,3 +108,11 @@ El comprovador de Supabase avisa que la protecció contra contrasenyes filtrades
 **Verificacions JS:** els mòduls tenen sintaxi vàlida i s'ha simulat una fitxa amb l'enllaç original i un article de recerca ja arxivat: tots dos apareixen al panell. També s'han comprovat la previsualització del PDF i la descàrrega de Word amb respostes Storage simulades.
 
 **Pendent de comprovació en navegador real:** que la interfície publicada renderitza correctament les fonts i que un fitxer original s'obre després de pujar-lo. No cal modificar dades originals per comprovar la navegació.
+
+## Ajustos d'ergonomia d'escriptori — 12/11/2026
+
+- A les fitxes de revisió, just sota el títol/data/etiquetes, **el requadre verd comença per Decisió editorial** (o Selecció de persones), seguit immediatament de **Fonts i documents de la fitxa**. Les dades originals segueixen consultables a continuació. Una reserva explícita d'espai manté aquest ordre encara que la consulta de fonts sigui asíncrona.
+- La llista de l'esquerra ara té **10 registres compactes per pàgina**, sense scroll intern. Cada títol ocupa una línia per augmentar la densitat; el títol íntegre es mostra en passar-hi el cursor i a la fitxa de la dreta. La paginació numèrica existent continua operativa, incloent salts de deu i última pàgina.
+- El formulari **Afegeix un material** es presenta plegat d'entrada, amb el control natiu accessible `<details><summary>`. Les fonts ja guardades es continuen mostrant; desplegar el formulari no afecta els materials ni les decisions.
+- Modificacions exclusivament d'HTML/JavaScript/CSS dins de `arxiu-privat/`. Cap migració, dada ni canvi al Supabase públic, app, radars o feed.
+- Proves: sintaxi dels scripts; renderització simulada de la fitxa amb decisió abans de fonts i dades originals més avall; comptatge 10 per pàgina i formulari tancat per defecte. Pendent comprovació visual final en navegador real.

@@ -30,7 +30,7 @@ textarea{min-height:95px;resize:vertical}input:focus,select:focus,textarea:focus
 footer{color:#64766b;font-size:12px;text-align:center;margin:25px 0 40px}
 @media(max-width:750px){.workspace,.fieldrow{grid-template-columns:1fr}.mast .shell{align-items:flex-start;flex-direction:column}.shell{padding:16px}.scroll{max-height:330px}}
 </style>
-<link rel="stylesheet" href="workflow.css?v=4">
+<link rel="stylesheet" href="workflow.css?v=5">
 </head>
 <body>
 <header class="mast"><div class="shell"><div><div class="eyebrow">Espai de treball · No públic</div><h1>Arxiu Històric de la Penya</h1><p>Recerca, revisió i memòria verd-i-negra</p></div><div class="inline" id="session-actions" hidden><span id="identity"></span><button class="ghost" id="logout">Surt</button></div></div></header>
@@ -232,7 +232,7 @@ archive_reference_catalogue:{title:'Catàleg de referència',description:'Fons d
 archive_manual_proposals:{title:'Aportacions pròpies',description:'Afegeix noves propostes sense tocar les dades originals.',fields:'id,title,day,month,historic_year,kind,status,decision,evidence,notes,reviewed'}
 };
 let view='archive_calendar_baseline',page=0,selected=null,rows=[],total=0,role=null,me=null,loadSeq=0;
-const limit=30;
+const limit=10; // Deu registres compactes per pàgina: visibles sense desplaçament intern.
 function notify(message,type=''){const n=$('notice');n.textContent=message;n.className=type;n.hidden=!message}
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function label(r){return r.title||r.name||r.id||'Sense títol'}
@@ -314,10 +314,10 @@ db.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){if(w
 if(session&&!window.__archivePasswordRecovery&&$('login').hidden===false)setTimeout(checkAccess,0)});
 checkAccess()}
 </script>
-<script src="workflow.js?v=3" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la nova Safata de revisió.'"></script>
-<script src="workflow-editor.js?v=4" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar l’editor de fitxes.'"></script>
+<script src="workflow.js?v=4" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la nova Safata de revisió.'"></script>
+<script src="workflow-editor.js?v=5" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar l’editor de fitxes.'"></script>
 <script src="workflow-relations.js?v=2" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’han pogut carregar les relacions documentals.'"></script>
-<script src="research-materials.js?v=2" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar el gestor de materials i fonts.'"></script>
+<script src="research-materials.js?v=3" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar el gestor de materials i fonts.'"></script>
 <script src="sources-hub.js?v=1" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la unificació de fonts i documents.'"></script>
 <script src="pagination.js?v=1" onerror="document.getElementById('notice').hidden=false;document.getElementById('notice').className='error';document.getElementById('notice').textContent='No s’ha pogut carregar la nova paginació.'"></script>
 </body>
