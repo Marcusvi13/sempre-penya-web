@@ -163,7 +163,7 @@ async function renderEventEditor(container,record,origin,seq){
  card.innerHTML=
   '<h4>Revisió editorial</h4>'+
   '<label for="editor-decision">Decisió</label><select id="editor-decision" required></select>'+
-  '<label for="editor-reason">Justificació i notes editorials</label><textarea id="editor-reason" placeholder="Explica el criteri, les fonts o allò que falta contrastar."></textarea>'+
+  '<label for="editor-reason">Justificació i notes editorials (opcional)</label><textarea id="editor-reason" placeholder="Pots deixar-lo en blanc per decidir més de pressa."></textarea>'+
   '<div id="editor-correction" hidden><p class="mini-help">Només omple els camps que vols corregir. L’original continuarà intacte.</p>'+
   '<label for="corrected-title">Títol corregit</label><input id="corrected-title">'+
   '<label for="corrected-kind">Tipus corregit</label><input id="corrected-kind">'+
@@ -215,9 +215,6 @@ async function renderEventEditor(container,record,origin,seq){
   const choice=sel.value,rationale=card.querySelector('#editor-reason').value.trim();
   const idLink=card.querySelector('#editor-linked-id').value.trim()||null;
   if(!choice){WF.showError('Tria una decisió editorial.');return}
-  if(['Descartar','Fusionar','Contrastar','Descartar proposta','Demanar contrast'].includes(choice)&&!rationale){
-   WF.showError('Per descartar, fusionar o demanar contrast cal explicar breument el motiu.');return;
-  }
   if(choice==='Fusionar'&&(!idLink||idLink===record.id)){
    WF.showError('Per fusionar, indica un altre registre existent del Calendari.');return;
   }
@@ -294,7 +291,7 @@ async function renderPersonEditor(container,person,seq){
  f.innerHTML='<h4>Selecció de persones</h4><label for="person-decision">Decisió</label>'+
   '<select id="person-decision" required><option value="">— Tria una decisió —</option>'+
   '<option>Incloure</option><option>Excloure</option><option>Contrastar</option></select>'+
-  '<label for="person-notes">Criteri i fonts</label><textarea id="person-notes" placeholder="Raó de la decisió, biografia, informació pendent…"></textarea>'+
+  '<label for="person-notes">Criteri i fonts (opcional)</label><textarea id="person-notes" placeholder="Pots afegir una explicació quan vulguis."></textarea>'+
   '<div class="editor-actions"><button type="submit" class="primary">Desa la revisió de la persona</button></div>';
  container.append(f);
  f.querySelector('#person-decision').value=existing?.decision||'';
@@ -304,7 +301,6 @@ async function renderPersonEditor(container,person,seq){
   const dec=f.querySelector('#person-decision').value;
   const notes=f.querySelector('#person-notes').value.trim();
   if(!dec)return;
-  if(dec!=='Incloure'&&!notes){WF.showError('Explica breument el motiu de l’exclusió o del contrast.');return}
   const button=f.querySelector('button');button.disabled=true;
   try{
    if(existing){
