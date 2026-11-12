@@ -46,7 +46,8 @@ function showMeta(d,record,ref,origin){
  if(ref.workflow_state)chips.append(WF.tag(ref.workflow_state,ref.workflow_state==='Descartat'?'danger':''));
  if(record.priority)chips.append(WF.tag('Prioritat '+record.priority,record.priority==='Alta'?'warn':'neutral'));
  d.append(chips);
- const source=section(d,'Dades originals del registre');
+ const originalInfo=mk('div','detail-original-info');
+ const source=section(originalInfo,'Dades originals del registre');
  if(record.day&&record.month&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Data anual',WF.itemDate(record));
  if(record.historic_year&&!['calendar','proposal','manual'].includes(origin))textRow(source,'Any històric',record.historic_year);
  if(record.status)textRow(source,'Classificació inicial',record.status);
@@ -72,7 +73,7 @@ function showMeta(d,record,ref,origin){
  if(record.synopsis)textRow(source,'Sinopsi',record.synopsis);
  if(record.years_referenced?.length)textRow(source,'Anys esmentats',record.years_referenced);
  if(record.people_referenced?.length)textRow(source,'Persones esmentades',record.people_referenced);
- return d;
+ return originalInfo;
 }
 WF.showRecord=async function(ref){
  const seq=++detailSequence;const d=get('detail');d.replaceChildren();
@@ -84,23 +85,30 @@ WF.showRecord=async function(ref){
   const {data,error}=await db.from(table).select('*').eq('id',ref.record_id).maybeSingle();
   if(!current(seq))return;
   if(error)throw error;if(!data){d.textContent='No hem trobat el registre original.';return}
-  d.replaceChildren();showMeta(d,data,ref,origin);
-  // La documentació és independent de la decisió editorial: disponible també per a descartats i pendents.
-  const materialsTask=(window.ArchiveSourcesHub?.render(d,origin,data,()=>current(seq))
-   ||window.ArchiveResearch?.render(d,origin,String(data.id),()=>current(seq))
-   ||Promise.resolve());
+  d.replaceChildren();
+  const originalInfo=showMeta(d,data,ref,origin);
+  // El requadre verd comença amb la decisió editorial. Les fonts van immediatament després.
+  const reviewHub=mk('div','editorial-review-hub');
+  d.append(reviewHub);
   const isEvent=['calendar','proposal','manual'].includes(origin);
+  let reviewTask=Promise.resolve();
   if(isEvent){
-   const reviewBlock=section(d,'Decisió editorial');
-   if(editable())await renderEventEditor(reviewBlock,data,origin,seq);
+   const reviewBlock=section(reviewHub,'Decisió editorial');
+   if(editable())reviewTask=renderEventEditor(reviewBlock,data,origin,seq);
    else reviewBlock.append(mk('p','empty-state','Compte de consulta: no pots modificar decisions.'));
   }else if(origin==='person'){
-   const reviewBlock=section(d,'Selecció de persones');
-   if(editable())await renderPersonEditor(reviewBlock,data,seq);
+   const reviewBlock=section(reviewHub,'Selecció de persones');
+   if(editable())reviewTask=renderPersonEditor(reviewBlock,data,seq);
   }else if(origin==='doubt'&&editable()){
-   const reviewBlock=section(d,'Seguiment del dubte');
+   const reviewBlock=section(reviewHub,'Seguiment del dubte');
    editorDoubt(reviewBlock,data);
   }
+  // Fonts i documents al mateix requadre, just després de les decisions.
+  const materialsTask=(window.ArchiveSourcesHub?.render(reviewHub,origin,data,()=>current(seq))
+   ||window.ArchiveResearch?.render(reviewHub,origin,String(data.id),()=>current(seq))
+   ||Promise.resolve());
+  d.append(originalInfo);
+  await reviewTask;
   if(!current(seq))return;
   const auditTable=origin==='calendar'?'archive_calendar_reviews':origin==='person'?'archive_people_reviews':table;
   const relatedKind=({person:'archive_people',source:'archive_sources',chapter:'archive_chapters',
@@ -118,7 +126,8 @@ WF.showExisting=function(record,activeView){
  const seq=++detailSequence;const d=get('detail');
  if(activeView==='archive_people'){
   d.replaceChildren();
-  showMeta(d,record,{record_id:record.id},'person');
+  const originalInfo=showMeta(d,record,{record_id:record.id},'person');
+  d.append(originalInfo);
   const p=section(d,'Selecció de persones');
   if(editable())renderPersonEditor(p,record,seq);
   else p.append(mk('p','empty-state','Aquest registre és de consulta.'));
