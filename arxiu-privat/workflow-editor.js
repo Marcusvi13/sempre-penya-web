@@ -103,9 +103,12 @@ WF.showRecord=async function(ref){
    const reviewBlock=section(reviewHub,'Seguiment del dubte');
    editorDoubt(reviewBlock,data);
   }
-  // Fonts i documents al mateix requadre, just després de les decisions.
-  const materialsTask=(window.ArchiveSourcesHub?.render(reviewHub,origin,data,()=>current(seq))
-   ||window.ArchiveResearch?.render(reviewHub,origin,String(data.id),()=>current(seq))
+  // Reserva la posició de les fonts immediatament sota la decisió.
+  // Així, encara que la càrrega documental trigui, mai no saltaran per sota de les dades originals.
+  const sourcesSlot=mk('div','detail-sources-slot');
+  reviewHub.append(sourcesSlot);
+  const materialsTask=(window.ArchiveSourcesHub?.render(sourcesSlot,origin,data,()=>current(seq))
+   ||window.ArchiveResearch?.render(sourcesSlot,origin,String(data.id),()=>current(seq))
    ||Promise.resolve());
   d.append(originalInfo);
   await reviewTask;
