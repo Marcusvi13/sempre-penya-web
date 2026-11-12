@@ -126,3 +126,7 @@ El comprovador de Supabase avisa que la protecció contra contrasenyes filtrades
 - Les categories especials del desplegable (Sense data, Vinculat, Fusionat, etc.) continuen accessibles amb el desplegable encara que no tinguin botó ràpid.
 - Només apareixen a la `Safata de revisió`; no modifiquen ni el Calendari validat ni les dades històriques originals.
 - Prova de comportament: estat per defecte Pendents, selecció Descarts/Tots, reset de pàgina, sincronització manual i evitació de recàrrega repetida, sense error de sintaxi.
+
+## Justificació editorial opcional (12/11/2026)
+
+La justificació/nota de les decisions editorials és **opcional** tant al calendari com a les propostes i a la selecció de persones. Es pot desar `Descartar`, `Contrastar`, `Fusionar` (amb ID de destinació), `Descartar proposta`, `Demanar contrast` o `Excloure` sense escriure cap motiu. El camp continua disponible per afegir-hi informació. **No** es relaxen les comprovacions de destí de fusió, vincle d'ampliació/correcció o camps necessaris per fer una correcció. No cal cap migració SQL: els camps `rationale`/`notes` ja accepten cadena buida. Proves d'escriptura revertides amb ROLLBACK; cap decisió real modificada.
