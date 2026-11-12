@@ -134,7 +134,7 @@
  color:#07533b;
  margin:0 0 9px;
 }
-.editorial-review-hub > .sources-hub{
+.editorial-review-hub > .detail-sources-slot > .sources-hub{
  border:0;
  border-top:1px solid #d5e5d9;
  border-radius:0;
@@ -142,7 +142,7 @@
  margin:16px 0 0;
  padding:14px 0 0;
 }
-.editorial-review-hub > .sources-hub > h4{font-size:15px}
+.editorial-review-hub > .detail-sources-slot > .sources-hub > h4{font-size:15px}
 .editorial-review-hub .editor-card{
  background:#fff;
  margin-top:8px;
