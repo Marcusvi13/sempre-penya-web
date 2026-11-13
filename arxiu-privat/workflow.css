@@ -285,3 +285,44 @@
 .archive-variant-confirm{display:flex;align-items:flex-start;gap:9px;margin:0;font-size:13px;line-height:1.45;font-weight:600}
 .archive-variant-confirm input{flex:0 0 auto;width:19px;height:19px;margin:1px 0 0;accent-color:#076545}
 #archive-import-variant-upload{border-color:#ccae60;color:#69500a;background:#fffcf1}
+
+/* Fase 2: estudi documental independent, controls editorials i traçabilitat de fonts. */
+.archive-study-panel{padding:20px}
+.archive-study-panel h2{font-size:21px;color:#07563c;margin:0 0 8px}
+.archive-study-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin:16px 0}
+.archive-study-stat{display:grid;gap:5px;background:#f3faf5;border:1px solid #d5e6d9;border-radius:10px;padding:11px 13px}
+.archive-study-stat strong{color:#07563c;font-size:23px;font-variant-numeric:tabular-nums}
+.archive-study-stat small{font-size:11px;color:#5d7262}
+.archive-study-controls{display:grid;grid-template-columns:1fr 1fr minmax(170px,1.4fr) auto;gap:10px;align-items:end;margin:14px 0}
+.archive-study-controls label{margin:0}
+.archive-study-controls input,.archive-study-controls select{margin-top:5px}
+.archive-study-columns{display:grid;grid-template-columns:minmax(250px,.85fr) minmax(370px,1.6fr);align-items:start;gap:15px}
+.archive-study-list-panel,.archive-study-detail{border:1px solid #d8e5dc;border-radius:12px;padding:11px;background:#fcfefc}
+.archive-study-list{max-height:70vh;overflow-y:auto;display:grid;gap:5px}
+.archive-study-source{display:grid;gap:4px;text-align:left;font-weight:400;font-size:12px;padding:8px 10px}
+.archive-study-source strong{font-size:13px;line-height:1.3}
+.archive-study-source small{font-size:11px;color:#667a6c}
+.archive-study-source.active{background:#eaf5ed;color:#07533b;border-color:#187e56}
+.archive-study-pages{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
+.archive-study-pages button{font-size:12px;padding:7px 9px}
+.archive-study-pages span{font-size:12px;color:#506858}
+.archive-study-detail h3{font-size:19px;margin:0 0 7px;color:#104d36}
+.archive-study-detail h4{font-size:15px;color:#17563d;margin:4px 0 10px}
+.archive-study-detail > .mini-help{overflow-wrap:anywhere;margin:8px 0}
+.archive-study-progress,.archive-study-proposals,.archive-study-findings{
+ border-top:1px solid #dae8df;padding-top:14px;margin-top:17px
+}
+.archive-study-field{display:grid;gap:4px;margin:9px 0;font-size:13px;color:#3b5946}
+.archive-study-field select,.archive-study-field textarea,.archive-study-field input{margin:0}
+.archive-study-field textarea{min-height:62px}
+.archive-study-progress>button,.archive-study-form>button{margin-top:6px;font-size:13px}
+.archive-study-finding{border:1px solid #dbe9df;border-radius:9px;padding:12px;margin:9px 0;background:#fff}
+.archive-study-finding>strong{font-size:14px;font-weight:700;line-height:1.45}
+.archive-study-finding>.mini-help{line-height:1.45;overflow-wrap:anywhere}
+.archive-study-finding-header{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.archive-study-edit-finding,.archive-study-add{margin:11px 0 0;border-top:1px solid #e8efe9;padding-top:10px}
+.archive-study-edit-finding summary,.archive-study-add summary{cursor:pointer;font-size:13px;font-weight:650;color:#086544}
+.archive-study-form{padding:10px 0}
+.archive-study-form select option{white-space:normal}
+@media(max-width:980px){.archive-study-controls{grid-template-columns:1fr 1fr}.archive-study-columns{grid-template-columns:1fr}}
+@media(max-width:550px){.archive-study-panel{padding:10px}.archive-study-controls{grid-template-columns:1fr}.archive-study-list{max-height:300px}}
