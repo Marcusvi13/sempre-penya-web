@@ -167,13 +167,14 @@ async function refreshInventory(){
   .select('id,title,kind,original_filename,original_sha256,storage_path,metadata')
   .order('id',{ascending:true}).limit(500);
  if(seq!==st.sequence)return;
- if(error){setNotice('No s’ha pogut consultar l’inventari: '+errText(error),true);return}
+ if(error){setNotice('No s’ha pogut consultar l’inventari: '+errText(error),true);return false}
  st.sources=data||[];
  st.loaded=true;
  // Si un altre editor ha enllaçat un original, no el tornarem a pujar.
  for(const s of st.sources)if(s.storage_path){st.matches.delete(s.id);st.failures.delete(s.id)}
  st.phase='Inventari actualitzat. '+countUploaded()+' originals vinculats; '+pending().length+' pendents.';
  renderStats();
+ return true;
 }
 async function render(host){
  if(!st.ui||st.host!==host){
@@ -190,7 +191,7 @@ async function digest(file){
 async function verifySelected(){
  if(isBusy())return;
  if(!crypto?.subtle){setNotice('Aquest navegador no disposa de SHA-256. Utilitza la web amb HTTPS a Chrome o Edge.',true);return}
- if(!st.loaded)await refreshInventory();
+ if(!st.loaded&&!(await refreshInventory()))return;
  if(!st.sources.length)return;
  st.verifying=true;st.checked=false;st.matches.clear();st.unmatched=[];
  st.phase='Comprovant fitxers un a un, sense enviar-los al servidor…';
@@ -283,7 +284,7 @@ async function attachOne(src,file){
 async function uploadMatched(){
  if(isBusy()||!st.checked)return;
  if(!WF.isEditor()){setNotice('Aquest usuari no té permís d’edició.',true);return}
- await refreshInventory();
+ if(!(await refreshInventory()))return;
  const jobs=ready();
  if(!jobs.length){setNotice('No hi ha originals pendents verificats per pujar.',true);return}
  if(!window.confirm('Pujar i vincular '+jobs.length+' originals verificats al repositori privat de la Penya?'))return;
