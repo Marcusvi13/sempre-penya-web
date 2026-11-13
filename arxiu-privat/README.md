@@ -154,3 +154,13 @@ La justificació/nota de les decisions editorials és **opcional** tant al calen
 5. Prem **Puja els originals verificats** i mantén oberta la pàgina fins que indiqui el final del procés.
 6. Torna a **Biblioteca i fonts → Fonts** i obre una font: ha de mostrar el PDF o la descàrrega del Word si està realment pujat.
 7. Si queden pendents, exporta l'inventari CSV, recupera els fitxers que falten i repeteix la importació.
+
+## Fonts de 1994 amb PDF alternatiu (13/11/2026)
+
+- Després de la primera importació hi havia **126 originals exactes** pujats i les deu fonts **F-081 a F-090** del *Mundo Deportivo* (21 i 22/04/1994) pendents. No teníem les seves dades binàries per comprovar si eren versions descarregades o exportades de manera diferent.
+- Es manté intacta la verificació estricta de l'original **SHA-256 + mida**. Si un PDF seleccionat no coincideix amb el hash inventariat, però porta un **nom inequívoc equivalent** al d'una font pendent i conté capçalera PDF, es proposa com a **versió alternativa**.
+- L'usuari ha d'obrir i revisar visualment cada fitxer abans de marcar explícitament la seva confirmació. Un botó diferent, «Puja les versions alternatives revisades», sol·licita una segona confirmació. Mai no es puja una versió alternativa mitjançant el botó habitual d'originals exactes.
+- Les versions alternatives es conserven en `public.archive_source_variants` (migració `migrations/20261113_source_pdf_variants.sql`): ID de font, ruta privada, hash i mida reals, nom, data de revisió, editor i nota. Té RLS de membre per lectura i només inserció per editors; no s'atorga UPDATE ni DELETE. Es registra al log d'auditoria.
+- L'original importat `archive_sources.original_sha256`, la seva mida i `archive_sources.storage_path` **NO es modifiquen** en aquesta operació. Per això l'inventari distingeix originals exactes, alternatives revisades i registres sense document.
+- La fitxa documental permet visualitzar el PDF alternatiu amb la mateixa autenticació i URL temporal privada, indicant clarament que no és la còpia original byte a byte. Si més endavant es recupera el PDF original, es podrà afegir sense perdre la versió alternativa.
+- No es desactiva cap política del magatzem ni es publica informació històrica al calendari. **Pendent** comprovació real des del navegador abans de donar la importació per completada.
