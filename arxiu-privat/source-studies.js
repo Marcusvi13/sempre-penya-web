@@ -320,7 +320,7 @@ async function renderDetail(id){
  renderFindings(src,findings);
 }
 async function loadData(showMessage=false){
- if(st.busy)return;
+ if(st.busy&&showMessage)return;
  const seq=++st.seq;
  if(showMessage)feedback('Actualitzant el seguiment documental…');
  const [sources,studies,findings,variants,proposals]=await Promise.all([
