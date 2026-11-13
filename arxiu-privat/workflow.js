@@ -3,7 +3,7 @@
 (function(){
 'use strict';
 const get=id=>document.getElementById(id);
-const queue='archive_review_queue',valid='archive_validated_calendar',history='archive_change_log',globalSearch='archive_global_search',importView='archive_source_import';
+const queue='archive_review_queue',valid='archive_validated_calendar',history='archive_change_log',globalSearch='archive_global_search',importView='archive_source_import',studyView='archive_source_study_workbench';
 views[queue]={
  title:'Safata de revisió',
  description:'Totes les efemèrides inicials, propostes documentals i aportacions. Les decisions no alteren les fonts originals.',
@@ -23,6 +23,11 @@ views[globalSearch]={
  title:'Cerca transversal',
  description:'Cerca simultàniament al Calendari, propostes, persones, fonts, capítols, dossiers, dubtes i catàleg documental. Escriu dos caràcters com a mínim.',
  fields:'item_key,origin,record_id,title,day,month,historic_year,kind,section'
+};
+views[studyView]={
+ title:'Estudi documental de les fonts',
+ description:'Lectura, registre de troballes i contrast de les 136 fonts, independentment del calendari validat.',
+ fields:'id'
 };
 views[importView]={
  title:'Importació de documents originals',
@@ -51,7 +56,8 @@ const subdivisions={
   {title:'Capítols',view:'archive_chapters'},
   {title:'Dossiers',view:'archive_dossiers'},
   {title:'Catàleg ampliat',view:'archive_reference_catalogue'},
-  {title:'Importar originals',view:importView}],
+  {title:'Importar originals',view:importView},
+  {title:'Estudi documental',view:studyView}],
  tracking:[
   {title:'Dubtes',view:'archive_doubts'},
   {title:'Historial',view:history}]
@@ -180,13 +186,18 @@ importPanel.id='archive-source-import';
 importPanel.className='card archive-import-panel';
 importPanel.hidden=true;
 toolbar.insertAdjacentElement('afterend',importPanel);
+const studyPanel=document.createElement('section');
+studyPanel.id='archive-source-study-panel';
+studyPanel.className='card archive-study-panel';
+studyPanel.hidden=true;
+importPanel.insertAdjacentElement('afterend',studyPanel);
 
 function groupFor(v){
  if(v===queue||v==='archive_proposals')return 'review';
  if(v==='archive_calendar_baseline')return 'calendar';
  if(v===valid)return 'validated';
  if(v==='archive_people')return 'people';
- if(['archive_sources','archive_chapters','archive_dossiers','archive_reference_catalogue',globalSearch,importView].includes(v))return 'library';
+ if(['archive_sources','archive_chapters','archive_dossiers','archive_reference_catalogue',globalSearch,importView,studyView].includes(v))return 'library';
  if(['archive_doubts',history].includes(v))return 'tracking';
  if(v==='archive_manual_proposals')return 'new';
  return 'review';
@@ -200,15 +211,17 @@ function syncUI(){
   b.onclick=()=>setView(item.view);subnav.append(b);
  });
  const isImporter=view===importView;
+ const isStudy=view===studyView;
  importPanel.hidden=!isImporter;
- workspace.hidden=isImporter;
- toolbar.hidden=isImporter;
+ studyPanel.hidden=!isStudy;
+ workspace.hidden=isImporter||isStudy;
+ toolbar.hidden=isImporter||isStudy;
  const isQ=view===queue;
  quickBar.hidden=!isQ;
  if(isQ)syncQuickState();
  filterBox.querySelectorAll('#workflow-origin,#workflow-status,#workflow-priority,#workflow-original,#workflow-kind,#workflow-source').forEach(e=>e.parentElement.hidden=!isQ);
  exportBtn.hidden=view!==valid;
- newBtn.hidden=view==='archive_manual_proposals'||view===importView;
+ newBtn.hidden=view==='archive_manual_proposals'||view===importView||view===studyView;
  get('month-filter').hidden=![queue,valid,'archive_calendar_baseline','archive_proposals','archive_reference_catalogue','archive_manual_proposals'].includes(view);
  get('search').placeholder=view===history?'Cerca un identificador de registre…':view===globalSearch?'Cerca a tot l’arxiu (mínim 2 caràcters)…':'Cerca un títol, una persona o una paraula…';
  get('search').setAttribute('aria-label','Cerca registres');
@@ -223,6 +236,14 @@ setView=function(next){
 };
 loadData=async function(){
  syncUI();
+ if(view===studyView){
+  ++loadSeq;selected=null;rows=[];total=0;
+  if(!window.ArchiveSourceStudy){
+   studyPanel.textContent='No s’ha pogut carregar el mòdul d’estudi documental.';
+   return;
+  }
+  return window.ArchiveSourceStudy.render(studyPanel);
+ }
  if(view===importView){
   ++loadSeq;selected=null;rows=[];total=0;
   if(!window.ArchiveSourceImport){
