@@ -246,3 +246,31 @@
  .review-quick-filters{gap:5px}
  .review-quick-filter{font-size:12px;padding:6px 9px}
 }
+
+/* Importador massiu d'originals: només dins la Biblioteca privada. */
+.archive-import-panel{padding:20px}
+.archive-import-panel h2{margin:0 0 9px;font-size:21px;color:#07543c}
+.archive-import-panel h3{font-size:16px;margin:24px 0 9px;color:#245c42}
+.archive-import-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:18px 0}
+.archive-import-stat{padding:12px 14px;background:#f2f8f4;border:1px solid #d3e3d8;border-radius:11px;display:grid;gap:5px}
+.archive-import-stat strong{font-size:24px;font-variant-numeric:tabular-nums;color:#07563c}
+.archive-import-stat span{font-size:12px;color:#54685b}
+.archive-import-pickers{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.archive-import-pickers label{border:1px solid #cfdfd4;border-radius:10px;padding:12px;margin:0;background:#fafdfa}
+.archive-import-pickers input{margin:8px 0 0;padding:7px;font-size:12px;max-width:100%}
+.archive-import-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.archive-import-actions button{font-size:13px}
+#archive-import-progress{display:block;width:100%;height:16px;accent-color:#07563c;margin:10px 0}
+#archive-import-progress[hidden]{display:none!important}
+#archive-import-phase{white-space:pre-wrap;overflow-wrap:anywhere}
+.archive-import-details{border:1px solid #d8e7dc;border-radius:10px;margin:10px 0;background:#fcfefc}
+.archive-import-details summary{padding:12px;cursor:pointer;font-size:14px;font-weight:650;color:#185a3e}
+.archive-import-table-wrap{overflow:auto;max-height:440px;padding:0 12px 12px}
+.archive-import-table-wrap table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}
+.archive-import-table-wrap th{position:sticky;top:0;background:#e7f2ea}
+.archive-import-table-wrap td,.archive-import-table-wrap th{border-bottom:1px solid #e2e9e4;padding:8px 9px;overflow-wrap:anywhere}
+.archive-import-table-wrap th:nth-child(2){min-width:180px}
+.archive-import-unmatched{margin-top:12px}
+.archive-import-unmatched summary{cursor:pointer;font-size:13px}
+.archive-import-unmatched li{margin:3px 0;font-size:12px;overflow-wrap:anywhere}
+@media(max-width:580px){.archive-import-panel{padding:12px}.archive-import-actions button{width:100%}}
