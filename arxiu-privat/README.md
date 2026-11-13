@@ -164,3 +164,37 @@ La justificació/nota de les decisions editorials és **opcional** tant al calen
 - L'original importat `archive_sources.original_sha256`, la seva mida i `archive_sources.storage_path` **NO es modifiquen** en aquesta operació. Per això l'inventari distingeix originals exactes, alternatives revisades i registres sense document.
 - La fitxa documental permet visualitzar el PDF alternatiu amb la mateixa autenticació i URL temporal privada, indicant clarament que no és la còpia original byte a byte. Si més endavant es recupera el PDF original, es podrà afegir sense perdre la versió alternativa.
 - No es desactiva cap política del magatzem ni es publica informació històrica al calendari. **Pendent** comprovació real des del navegador abans de donar la importació per completada.
+
+## Fase 2 — estudi sistemàtic de les fonts (13/11/2026)
+
+### Estat inicial verificat
+- **136 documents** al bucket privat: **126 còpies exactes** de l'inventari i **10 versions alternatives** amb empremta pròpia; no barrejar mai les dues categories.
+- La biblioteca inclou 156 propostes històriques, 101 capítols del llibre i 33 dubtes documentals previs, que **no es donen per contrastats automàticament**.
+- Primer lot de lectura assistida: **8 fonts** (F-001, F-002, F-003, F-004, F-010, F-013, F-017, F-018) en estat **lectura parcial**, amb **15 troballes registrades**. No s'ha marcat cap font «estudiada» o «contrastada» només per haver llegit el text OCR.
+
+### Nou espai de treball
+**Biblioteca i fonts → Estudi documental** ofereix una cua de totes les fonts, ordenada per prioritat, amb cerca i filtres d'estat i valor. Cada fitxa presenta l'enllaç privat al document, les notes de lectura, les propostes que citen aquell nom de fitxer i les troballes relacionades.
+
+Els quatre estats de progrés són:
+1. **Pendent:** no hi ha revisió documentada; el valor «inventariat» que constava als fulls d'importació no compta com a estudi.
+2. **Lectura parcial:** s'ha llegit una part o un text OCR però falta comprovació visual, cobertura de totes les pàgines o contrast.
+3. **Estudiat:** s'ha revisat completament el document i se n'han extret les dades rellevants.
+4. **Contrastat:** les dades necessàries s'han comparat amb fonts independents i s'han resolt les qüestions pertinents.
+
+Les troballes tenen una descripció, una pàgina/referència, una observació sobre les evidències, una acció pendent, una categoria (pista, contradicció, contrastada o descartada) i una proposta existent opcional. Una font pot contenir diverses troballes. El contingut incorporat per revisió assistida apareix amb etiqueta pròpia.
+
+### Seguretat, dades i criteri editorial
+- Taules noves independents: `archive_source_studies` (estats i notes) i `archive_source_findings` (troballes i enllaços a propostes), RLS de lectura per a membres i escriptura per a editors, control de versió en canvis, registre d'auditoria amb `source_id`.
+- No es modifiquen `archive_sources`, les empremtes digitals, els originals, els PDF alternatius, els registres del calendari, les decisions editorials ni els radars de Sempre Penya.
+- Passar una troballa a «contrastada» no implica aprovar la proposta ni fer aparèixer una efemèride al calendari validat.
+- Les primeres fitxes es basen en extracció de text de pàgines de Mundo Deportivo (1980, 1982, 1983 i 2005), susceptible d'errors OCR. El text ha estat llegit, però no és una transcripció diplomàtica validada. Prioritzar el facsímil visual i dates/documentació contemporànies.
+
+### Primeres contradiccions a resoldre
+- **DH5-02:** primer partit contra Penya Ni Cinc: Estruch (1983) recorda un 5–3, mentre que el reportatge de 2005 indica 8–3.
+- **DH5-04:** adopció de Centre Esportiu Badaloní: articles de 1980 i testimoni de 1983 situen 1933, article de 2005 indica 1932. Altres referències externes arriben a 1935; investigar l'acta/registre i distingir denominació, aprovació d'estatuts i competició.
+- **DH5-03:** encàrrec/compra de samarretes verd-i-negres: article de 1980 parla d'onze i el de 2005 diferencia encàrrec d'onze i compra de nou.
+- **DH5-01:** reunió fundacional al local de la impremta Lloret (1980) o garatge proper a Roca i Pi (2005).
+- **DH5-07/DH5-09/DH5-11:** retrospectiva de 1980 dona 3/07/1948 (La Plana), c. 1952 (coberta) i 30/09/1972 (Ausiàs March), pendents de fonts contemporànies.
+
+### Proves i límits
+Validació RLS: només membres poden llegir; editors poden fer INSERT/UPDATE; una actualització amb versió antiga no ha de trepitjar edicions concurrents. Proves SQL amb `ROLLBACK`: canvi d'estat i de troballa, increment automàtic de versió i identificador d'auditoria. Simulació de UI: tres fonts, filtratge de pendents, vista de font amb fitxer alternatiu i troballa vinculada. La verificació **real en navegador** continua pendent; els primers 8 registres i 15 troballes estan **efectivament persistits** al Supabase privat.
