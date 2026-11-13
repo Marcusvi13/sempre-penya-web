@@ -92,8 +92,10 @@ function filtered(){
    (!st.ui.level.value||priority(s)===st.ui.level.value)&&
    (!term||[s.id,s.title,s.original_filename,s.metadata?.inventory?.['Àmbit']]
     .some(v=>String(v||'').toLocaleLowerCase('ca').includes(term)))
- ).sort((a,b)=>LEVELS.indexOf(priority(a)) - LEVELS.indexOf(priority(b))||
-  a.id.localeCompare(b.id,'ca',{numeric:true}));
+ ).sort((a,b)=>{
+  const rank=s=>{const n=LEVELS.indexOf(priority(s));return n<0?LEVELS.length:n};
+  return rank(a)-rank(b)||a.id.localeCompare(b.id,'ca',{numeric:true});
+ });
 }
 function renderStats(){
  const total=st.sources.length;
