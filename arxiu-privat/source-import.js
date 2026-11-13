@@ -50,7 +50,8 @@ const ready=()=>pending().filter(s=>st.matches.has(s.id));
 function renderStats(){
  if(!st.ui)return;
  const {stats,upload,variantUpload,verify,pauseButton,progress,detailTable}=st.ui;
- const done=countUploaded(),variants=st.variants.size,waiting=st.sources.length-done-variants;
+ const done=countUploaded(),variants=st.variants.size;
+ const waiting=st.sources.filter(s=>!s.storage_path&&!st.variants.has(s.id)).length;
  const matched=ready().length;
  stats.replaceChildren();
  const cells=[
@@ -262,6 +263,9 @@ async function verifySelected(){
  renderStats();
  try{
   const bySize=new Map(),byName=new Map();
+  // Si l'editor torna a seleccionar tota la carpeta, no marquem com a errors els ja incorporats.
+  const alreadyAvailableNames=new Set(st.sources.filter(s=>s.storage_path||st.variants.has(s.id))
+   .map(s=>normalizedPdfName(filename(s))));
   for(const src of pending()){
    const size=sizeOf(src);
    if(size&&src.original_sha256){
@@ -278,6 +282,7 @@ async function verifySelected(){
    const sources=bySize.get(file.size)||[];
    const candidates=byName.get(normalizedPdfName(file.name))||[];
    if(!sources.length&&!candidates.length){
+    if(alreadyAvailableNames.has(normalizedPdfName(file.name)))continue;
     st.unmatched.push(file.name+' — mida i nom no coincideixen amb els pendents');continue;
    }
    try{
@@ -293,7 +298,7 @@ async function verifySelected(){
      if(!sig.includes('%PDF-')){
       st.unmatched.push(file.name+' — no conté una capçalera PDF vàlida');
      }else if(!st.variantCandidates.has(src.id)){
-      st.variantCandidates.set(src.id,{file,sha,confirmed:false});
+      st.variantCandidates.set(src.id,{file,sha,size:file.size,confirmed:false});
      }
     }else{
      st.unmatched.push(file.name+(candidates.length>1
@@ -411,7 +416,7 @@ async function attachVariant(src,candidate){
  const file=candidate.file;
  const sha=await digest(file);
  if(!candidate.confirmed||sha.toLowerCase()!==candidate.sha.toLowerCase()||
-    file.size!==candidate.file.size)
+    file.size!==candidate.size)
   throw new Error('Cal tornar a verificar la versió alternativa abans de pujar-la.');
  if(!/^[A-Za-z0-9_-]+$/.test(src.id))throw new Error('ID documental no vàlid');
  if(normalizedPdfName(file.name)!==normalizedPdfName(filename(src)))
