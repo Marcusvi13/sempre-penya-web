@@ -130,3 +130,27 @@ El comprovador de Supabase avisa que la protecció contra contrasenyes filtrades
 ## Justificació editorial opcional (12/11/2026)
 
 La justificació/nota de les decisions editorials és **opcional** tant al calendari com a les propostes i a la selecció de persones. Es pot desar `Descartar`, `Contrastar`, `Fusionar` (amb ID de destinació), `Descartar proposta`, `Demanar contrast` o `Excloure` sense escriure cap motiu. El camp continua disponible per afegir-hi informació. **No** es relaxen les comprovacions de destí de fusió, vincle d'ampliació/correcció o camps necessaris per fer una correcció. No cal cap migració SQL: els camps `rationale`/`notes` ja accepten cadena buida. Proves d'escriptura revertides amb ROLLBACK; cap decisió real modificada.
+
+## Fase 1: importació massiva dels 136 originals (13/11/2026)
+
+- A **Biblioteca i fonts → Importar originals** hi ha un importador exclusiu de l'Arxiu Històric; permet seleccionar diversos fitxers alhora o una carpeta sencera amb subcarpetes (Chrome/Edge).
+- L'inventari existent compta **136 originals**, uns **88,02 MB** en total, amb SHA-256 i mida esperada. Aquest inventari és un registre històric, no una prova que els bytes dels fitxers es trobin a Supabase.
+- La **verificació prèvia** es fa dins del navegador de l'editor. Es calcula SHA-256 de cada fitxer i es contrasta amb les mides i empremtes de l'inventari. El nom no s'utilitza com a criteri suficient: una còpia reanomenada amb hash idèntic es pot vincular sense equivocar-la.
+- Un cop verificats, el botó **Puja els originals verificats** demana confirmació i carrega els fitxers **un a un** al bucket privat `arxiu-historic-privat` des de l'ordinador de l'editor, amb la sessió Supabase autenticada i RLS; `upsert:false`. No s'afegeixen fitxers ni secrets a GitHub.
+- Per a cada original, verifica de nou el hash just abans de pujar-lo, carrega a `<usuari>/archive-sources/<font>/<uuid>-<nom>` i vincula **únicament `archive_sources.storage_path`**, mai el títol, text, SHA-256 ni les decisions editorials.
+- Els originals vinculats es comptabilitzen des de la base de dades i **no es tornen a pujar**. Si la càrrega s'interromp, l'usuari pot tornar a seleccionar els fitxers i reprendre només els pendents. Hi ha opció d'aturar després del fitxer actual i un inventari CSV exportable.
+- Davant un error de vinculació després de pujar, es comprova si la base de dades ja ha registrat el camí; només es neteja un fitxer temporal quan és segur que no està vinculat. En fallades amb estat desconegut, preval no destruir dades.
+- Si se seleccionen PDF, imatges o Word que no coincideixin per SHA-256 i mida amb cap original pendent, s'indiquen com a **sense correspondència** i no es pugen.
+- Tot opera al **projecte independent** `lfmudiewyupfvtmlgpse`. Cap migració nova; les polítiques privades d'edició i `archive_sources.storage_path` ja s'havien preparat.
+- El 13/11/2026 s'han trobat **81 dels 136 originals** amb coincidència de nom i bytes a la Biblioteca de ChatGPT, però l'accés de materialització de bytes de la Biblioteca no està disponible en aquest entorn; 55 originals més no figuren amb nom i mida coincidents a la Biblioteca accessible. Per això la càrrega real requereix seleccionar la carpeta original des de l'ordinador. No afirmar que els 81 documents són a Supabase.
+- Prova de mòdul amb Storage i Supabase simulats: fitxer verificat → pujada → confirmació de camí; document no coincident exclòs del conjunt verificat. **Pendent una prova real amb la sessió autenticada al navegador** per demostrar la recepció i obertura del primer PDF.
+
+### Procediment recomanat per a l'editor
+
+1. Des del PC, desa/descomprimeix en una carpeta els documents originals (PDF, DOCX, JPG). Pots conservar subcarpetes.
+2. Entra a `https://semprepenya.cat/arxiu-privat/`, obre **Biblioteca i fonts → Importar originals**.
+3. Prem **Carpeta sencera** i selecciona la carpeta arrel; si tens carpetes diferents, pots seleccionar-les successivament.
+4. Prem **Comprova integritat SHA-256**. Revisa quants dels 136 originals queden verificats.
+5. Prem **Puja els originals verificats** i mantén oberta la pàgina fins que indiqui el final del procés.
+6. Torna a **Biblioteca i fonts → Fonts** i obre una font: ha de mostrar el PDF o la descàrrega del Word si està realment pujat.
+7. Si queden pendents, exporta l'inventari CSV, recupera els fitxers que falten i repeteix la importació.
