@@ -53,8 +53,34 @@ async function documentCard(parent,source,alive,canUpload=true){
   };
   card.append(btn,preview);
  }else if(source.original_filename){
-  card.append(el('p','source-missing',
-   'Original inventariat però encara no pujat a Supabase. No és possible obrir-lo fins que s’hi adjunti el fitxer.'));
+  let alternative=null;
+  if(/\.pdf$/i.test(source.original_filename)){
+   const {data,error}=await db.from('archive_source_variants')
+    .select('storage_path,actual_sha256,actual_bytes,file_name,reviewed_at')
+    .eq('source_id',source.id).maybeSingle();
+   if(error)card.append(el('p','source-missing','No es pot consultar l’estat de les versions alternatives: '+error.message));
+   else alternative=data;
+  }
+  if(alternative){
+   card.append(el('p','source-available',
+    'Versió alternativa conservada (PDF revisat manualment). La còpia exacta de l’inventari continua pendent.'));
+   text(card,'SHA-256 de la versió alternativa',alternative.actual_sha256);
+   text(card,'Mida de la versió alternativa',alternative.actual_bytes+' bytes');
+   const altButton=el('button','source-file-button','Visualitza la versió alternativa');
+   altButton.type='button';
+   const altPreview=el('div','document-preview');
+   altButton.onclick=async()=>{
+    altButton.disabled=true;
+    try{await window.ArchiveResearch.openPrivateFile(
+     alternative.storage_path,alternative.file_name,'application/pdf',altPreview)}
+    catch(error){WF.showError('No es pot obrir la versió alternativa: '+(error?.message||error))}
+    finally{altButton.disabled=false}
+   };
+   card.append(altButton,altPreview);
+  }else if(!card.querySelector('.source-missing')){
+   card.append(el('p','source-missing',
+    'Original inventariat però encara no pujat a Supabase. No es pot obrir fins que es vinculi el fitxer.'));
+  }
   if(WF.isEditor()&&canUpload&&source.original_sha256){
    const form=el('form','source-upload-original');
    const label=el('label','','Selecciona el document original');
