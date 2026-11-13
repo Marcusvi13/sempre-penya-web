@@ -100,6 +100,46 @@ function renderStats(){
   n.append(l);unmatchedList.append(n);
  }
 }
+function renderAlternativeCandidates(){
+ if(!st.ui)return;
+ const host=st.ui.candidates;
+ host.replaceChildren();
+ if(!st.variantCandidates.size)return;
+ const title=create('h3','','Versions alternatives possibles (revisió manual)');
+ host.append(title);
+ host.append(create('p','mini-help',
+  'Aquests PDF tenen el mateix nom que una font pendent, però bytes o SHA-256 diferents. '+
+  'No són originals idèntics. Obre cada PDF, comprova la data i la pàgina i confirma només les correspondències segures.'));
+ for(const [id,candidate] of st.variantCandidates){
+  const src=st.sources.find(s=>s.id===id);
+  if(!src||src.storage_path||st.variants.has(id))continue;
+  const card=create('div','archive-variant-candidate');
+  card.append(create('strong','',id+' · '+filename(src)));
+  card.append(create('p','mini-help','Inventari: '+sizeOf(src)+' bytes, SHA-256 '+src.original_sha256.slice(0,12)+'…'));
+  card.append(create('p','mini-help','Seleccionat: '+candidate.file.name+' ('+candidate.file.size+' bytes), SHA-256 '+candidate.sha.slice(0,12)+'…'));
+  const open=create('button','','Previsualitza aquest PDF');
+  open.type='button';
+  open.onclick=()=>{
+   const url=URL.createObjectURL(candidate.file);
+   const a=create('a');
+   a.href=url;a.target='_blank';a.rel='noopener noreferrer';
+   document.body.append(a);a.click();a.remove();
+   // El navegador pot necessitar l'URL mentre la pestanya visualitza el PDF.
+   setTimeout(()=>URL.revokeObjectURL(url),180000);
+  };
+  const label=create('label','archive-variant-confirm');
+  const checkbox=create('input');
+  checkbox.type='checkbox';checkbox.checked=Boolean(candidate.confirmed);
+  const description=create('span','',
+    'He obert el PDF i he comprovat que correspon a aquesta pàgina del Mundo Deportivo. '+
+    'L’accepto com a versió alternativa, no com a còpia idèntica.');
+  label.append(checkbox,description);
+  checkbox.onchange=()=>{candidate.confirmed=checkbox.checked;renderStats()};
+  card.append(open,label);
+  host.append(card);
+ }
+}
+
 function mount(host){
  const shell=create('div','archive-import-content');
  shell.innerHTML=
@@ -367,6 +407,90 @@ async function uploadMatched(){
   renderStats();
  }
 }
+async function attachVariant(src,candidate){
+ const file=candidate.file;
+ const sha=await digest(file);
+ if(!candidate.confirmed||sha.toLowerCase()!==candidate.sha.toLowerCase()||
+    file.size!==candidate.file.size)
+  throw new Error('Cal tornar a verificar la versió alternativa abans de pujar-la.');
+ if(!/^[A-Za-z0-9_-]+$/.test(src.id))throw new Error('ID documental no vàlid');
+ if(normalizedPdfName(file.name)!==normalizedPdfName(filename(src)))
+  throw new Error('El nom de la pàgina no correspon a l’inventari.');
+ const signature=new Uint8Array(await file.slice(0,1024).arrayBuffer());
+ if(!String.fromCharCode(...signature).includes('%PDF-'))throw new Error('La signatura del document no correspon a un PDF.');
+ const path=me.id+'/archive-sources/'+src.id+'/'+crypto.randomUUID()+'-'+sanitize(filename(src));
+ const storage=db.storage.from(BUCKET);
+ const {error:uploadError}=await storage.upload(path,file,{
+  upsert:false,contentType:'application/pdf',cacheControl:'3600'
+ });
+ if(uploadError)throw uploadError;
+ const payload={
+  source_id:src.id,storage_path:path,file_name:file.name,
+  actual_sha256:sha.toLowerCase(),actual_bytes:file.size,reviewed_by:me.id,
+  review_note:'Vinculat manualment després de comparar la pàgina; diferència de SHA-256 amb l’inventari.'
+ };
+ try{
+  const {data,error}=await db.from('archive_source_variants').insert(payload).select('id,source_id,storage_path').single();
+  if(error)throw error;
+  if(!data?.id||data.storage_path!==path)throw new Error('No s’ha confirmat la vinculació de la versió alternativa.');
+  st.variants.set(src.id,{...payload,id:data.id});
+  return;
+ }catch(err){
+  // Evita esborrar un fitxer que s'hagi pogut vincular malgrat una resposta perduda.
+  const {data:existing,error:readError}=await db.from('archive_source_variants')
+   .select('id,storage_path,actual_sha256').eq('source_id',src.id).maybeSingle();
+  if(!readError&&existing?.storage_path===path&&existing?.actual_sha256===sha.toLowerCase()){
+   st.variants.set(src.id,{...payload,id:existing.id});return;
+  }
+  if(readError)throw new Error(errText(err)+'; no sabem si el registre s’ha desat; no esborrem el fitxer pujat.');
+  const {error:cleanError}=await storage.remove([path]);
+  if(cleanError)throw new Error(errText(err)+'; no s’ha pogut retirar el fitxer temporal: '+errText(cleanError));
+  throw err;
+ }
+}
+async function uploadAlternatives(){
+ if(isBusy()||!st.checked||!WF.isEditor())return;
+ if(!(await refreshInventory()))return;
+ const jobs=eligibleAlternatives().map(([id,candidate])=>({
+  src:st.sources.find(s=>s.id===id),candidate
+ })).filter(x=>x.src);
+ if(!jobs.length){setNotice('No hi ha versions alternatives revisades pendents de pujar.',true);return}
+ const ok=window.confirm(
+  'Has revisat visualment aquestes '+jobs.length+' pàgines? Es desaran com a VERSIONS ALTERNATIVES: '+
+  'el SHA-256 original inventariat no es canviarà. Vols continuar?'
+ );
+ if(!ok)return;
+ st.uploading=true;st.stop=false;
+ st.runTotal=jobs.length;st.processed=0;st.completedThisRun=0;
+ st.failures.clear();renderStats();
+ try{
+  for(const {src,candidate} of jobs){
+   if(st.stop)break;
+   st.phase='Pujant versió alternativa '+(st.processed+1)+'/'+jobs.length+': '+filename(src);
+   renderStats();
+   try{
+    await attachVariant(src,candidate);
+    st.completedThisRun++;
+    st.variantCandidates.delete(src.id);
+   }catch(error){
+    const message=errText(error);
+    st.failures.set(src.id,message);
+    if(/(?:401|403|JWT|token expired|permission denied|Unauthorized)/i.test(message))st.stop=true;
+   }
+   st.processed++;renderStats();
+  }
+ }finally{
+  st.uploading=false;
+  await refreshInventory();
+  st.phase='Versions alternatives vinculades en aquesta passada: '+st.completedThisRun+
+   '. Errors: '+st.failures.size+'. Originals exactes: '+countUploaded()+
+   ', alternatives: '+st.variants.size+', sense document: '+pending().length+'.'+
+   (st.stop?' Procés aturat.':'');
+  setNotice(st.phase,st.failures.size>0);
+  st.runTotal=0;st.processed=0;renderStats();
+ }
+}
+
 function csvSafe(value){
  const text=String(value??'');
  const escaped=/^[=+@-]/.test(text)?"'"+text:text;
