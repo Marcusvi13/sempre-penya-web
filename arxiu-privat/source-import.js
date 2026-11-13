@@ -11,6 +11,7 @@ const BUCKET='arxiu-historic-privat';
 const MAX_BYTES=20*1024*1024;
 const st={
  sources:[],files:new Map(),matches:new Map(),failures:new Map(),
+ variants:new Map(),variantCandidates:new Map(),
  unmatched:[],checked:false,verifying:false,uploading:false,stop:false,
  phase:'',loaded:false,processed:0,runTotal:0,completedThisRun:0,
  host:null,ui:null,sequence:0
@@ -38,18 +39,25 @@ function pause(){
  if(st.uploading){st.stop=true;setNotice('Pausa sol·licitada: acabarem el fitxer en curs i ens aturarem.')}
 }
 const countUploaded=()=>st.sources.filter(s=>Boolean(s.storage_path)).length;
-const pending=()=>st.sources.filter(s=>!s.storage_path);
+const pending=()=>st.sources.filter(s=>!s.storage_path&&!st.variants.has(s.id));
+const eligibleAlternatives=()=>[...st.variantCandidates.entries()]
+ .filter(([id,item])=>item.confirmed&&!st.variants.has(id)&&st.sources.some(s=>s.id===id&&!s.storage_path));
+function normalizedPdfName(name){
+ return String(name||'').toLowerCase().replace(/\s*\(\d+\)(?=\.pdf$)/,'')
+  .replace(/_\d+_(?=\.pdf$)/,'').trim();
+}
 const ready=()=>pending().filter(s=>st.matches.has(s.id));
 function renderStats(){
  if(!st.ui)return;
- const {stats,upload,verify,pauseButton,progress,detailTable}=st.ui;
- const done=countUploaded(),waiting=st.sources.length-done;
+ const {stats,upload,variantUpload,verify,pauseButton,progress,detailTable}=st.ui;
+ const done=countUploaded(),variants=st.variants.size,waiting=st.sources.length-done-variants;
  const matched=ready().length;
  stats.replaceChildren();
  const cells=[
   ['Originals inventariats',st.sources.length],
-  ['Pujats i vinculats',done],
-  ['Pendents',waiting],
+  ['Originals idèntics pujats',done],
+  ['Versions alternatives',variants],
+  ['Sense document',waiting],
   ['Verificats per pujar',matched],
   ['Errors de pujada',st.failures.size]
  ];
@@ -63,15 +71,17 @@ function renderStats(){
  progress.title=st.runTotal?st.processed+' de '+st.runTotal+' fitxers gestionats ('+pct+'%)':'';
  verify.disabled=isBusy()||!st.files.size;
  upload.disabled=isBusy()||!matched;
+ variantUpload.disabled=isBusy()||!st.checked||!eligibleAlternatives().length;
  pauseButton.disabled=!st.uploading||st.stop;
  st.ui.fileCount.textContent=st.files.size+' fitxers seleccionats'
-  +(st.checked?' · '+matched+' fonts verificades'+(st.unmatched.length?' · '+st.unmatched.length+' fitxers sense correspondència':''):'');
+  +(st.checked?' · '+matched+' originals exactes · '+st.variantCandidates.size+' possibles versions alternatives'
+    +(st.unmatched.length?' · '+st.unmatched.length+' fitxers sense correspondència':''):'');
  st.ui.phase.textContent=st.phase;
  detailTable.replaceChildren();
  const fragment=document.createDocumentFragment();
  st.sources.forEach(s=>{
   const tr=create('tr');
-  const status=s.storage_path?'Pujat i vinculat':st.failures.has(s.id)?'Error: '+st.failures.get(s.id):
+  const status=s.storage_path?'Original exacte vinculat':st.variants.has(s.id)?'Versió alternativa conservada (hash diferent)':st.failures.has(s.id)?'Error: '+st.failures.get(s.id):
    st.matches.has(s.id)?'Verificat, pendent de pujar':'Pendent de seleccionar';
   for(const value of [s.id,filename(s),Math.round(sizeOf(s)/1024)+' KB',status]){
    tr.append(create('td','',value));
@@ -79,6 +89,7 @@ function renderStats(){
   fragment.append(tr);
  });
  detailTable.append(fragment);
+ renderAlternativeCandidates();
  const unmatchedList=st.ui.unmatched;
  unmatchedList.replaceChildren();
  if(st.unmatched.length){
@@ -105,6 +116,7 @@ function mount(host){
   '<div class="archive-import-actions">'+
    '<button id="archive-import-verify" type="button">Comprova integritat SHA-256</button>'+
    '<button id="archive-import-start" type="button" class="primary">Puja els originals verificats</button>'+
+   '<button id="archive-import-variant-upload" type="button">Puja les versions alternatives revisades</button>'+
    '<button id="archive-import-pause" type="button">Atura després del fitxer actual</button>'+
    '<button id="archive-import-refresh" type="button">Actualitza l’inventari</button>'+
    '<button id="archive-import-export" type="button">Descarrega inventari CSV</button>'+
@@ -117,6 +129,7 @@ function mount(host){
   '<details class="archive-import-details"><summary>Mostra el detall dels 136 documents i el seu estat</summary>'+
    '<div class="archive-import-table-wrap"><table><thead><tr><th>ID</th><th>Fitxer</th><th>Mida</th><th>Estat</th></tr></thead><tbody id="archive-import-table"></tbody></table></div>'+
   '</details>'+
+  '<div id="archive-import-alternative-candidates"></div>'+
   '<div id="archive-import-unmatched"></div>'+
   '<p class="mini-help">Pots tancar la sessió i reprendre la importació un altre dia: la base de dades manté els fitxers ja vinculats. Si interromps una pujada, torna a seleccionar la carpeta i repeteix la comprovació abans de continuar.</p>';
  host.replaceChildren(shell);
@@ -125,6 +138,8 @@ function mount(host){
   stats:e('archive-import-stats'),files:e('archive-import-files'),
   folder:e('archive-import-folder'),fileCount:e('archive-import-file-count'),
   verify:e('archive-import-verify'),upload:e('archive-import-start'),
+  variantUpload:e('archive-import-variant-upload'),
+  candidates:e('archive-import-alternative-candidates'),
   pauseButton:e('archive-import-pause'),refresh:e('archive-import-refresh'),
   export:e('archive-import-export'),progress:e('archive-import-progress'),
   notice:e('archive-import-notice'),phase:e('archive-import-phase'),
@@ -140,6 +155,7 @@ function mount(host){
  };
  st.ui.verify.onclick=verifySelected;
  st.ui.upload.onclick=uploadMatched;
+ st.ui.variantUpload.onclick=uploadAlternatives;
  st.ui.pauseButton.onclick=pause;
  st.ui.refresh.onclick=async()=>{if(isBusy())return;await refreshInventory()};
  st.ui.export.onclick=exportInventory;
@@ -151,7 +167,7 @@ function addFiles(files){
   if(!file||!Number.isFinite(file.size))continue;
   st.files.set(fileKey(file),file);
  }
- st.checked=false;st.matches.clear();st.unmatched=[];
+ st.checked=false;st.matches.clear();st.variantCandidates.clear();st.unmatched=[];
  st.failures.clear();st.runTotal=0;st.processed=0;
  st.phase='Seleccionats '+st.files.size+' fitxers. Prem «Comprova integritat SHA-256».';
  setNotice('');renderStats();
@@ -166,13 +182,21 @@ async function refreshInventory(){
  const {data,error}=await db.from('archive_sources')
   .select('id,title,kind,original_filename,original_sha256,storage_path,metadata')
   .order('id',{ascending:true}).limit(500);
- if(seq!==st.sequence)return;
+ if(seq!==st.sequence)return false;
  if(error){setNotice('No s’ha pogut consultar l’inventari: '+errText(error),true);return false}
+ const {data:variants,error:variantError}=await db.from('archive_source_variants')
+  .select('id,source_id,storage_path,actual_sha256,actual_bytes,file_name,review_note').limit(500);
+ if(seq!==st.sequence)return false;
+ if(variantError){setNotice('No s’han pogut consultar les versions alternatives: '+errText(variantError),true);return false}
  st.sources=data||[];
+ st.variants=new Map((variants||[]).map(v=>[v.source_id,v]));
  st.loaded=true;
- // Si un altre editor ha enllaçat un original, no el tornarem a pujar.
- for(const s of st.sources)if(s.storage_path){st.matches.delete(s.id);st.failures.delete(s.id)}
- st.phase='Inventari actualitzat. '+countUploaded()+' originals vinculats; '+pending().length+' pendents.';
+ // Les fonts ja vinculades no es tornen a pujar en les passades posteriors.
+ for(const s of st.sources)if(s.storage_path||st.variants.has(s.id)){
+  st.matches.delete(s.id);st.variantCandidates.delete(s.id);st.failures.delete(s.id);
+ }
+ st.phase='Inventari actualitzat: '+countUploaded()+' originals idèntics, '+st.variants.size+
+  ' alternatives revisades i '+pending().length+' encara sense document.';
  renderStats();
  return true;
 }
@@ -193,41 +217,63 @@ async function verifySelected(){
  if(!window.crypto?.subtle){setNotice('Aquest navegador no disposa de SHA-256. Utilitza la web amb HTTPS a Chrome o Edge.',true);return}
  if(!st.loaded&&!(await refreshInventory()))return;
  if(!st.sources.length)return;
- st.verifying=true;st.checked=false;st.matches.clear();st.unmatched=[];
+ st.verifying=true;st.checked=false;st.matches.clear();st.variantCandidates.clear();st.unmatched=[];
  st.phase='Comprovant fitxers un a un, sense enviar-los al servidor…';
  renderStats();
  try{
-  const bySize=new Map();
+  const bySize=new Map(),byName=new Map();
   for(const src of pending()){
    const size=sizeOf(src);
-   if(!size||!src.original_sha256)continue;
-   const list=bySize.get(size)||[];list.push(src);bySize.set(size,list);
+   if(size&&src.original_sha256){
+    const group=bySize.get(size)||[];group.push(src);bySize.set(size,group);
+   }
+   if(src.kind==='PDF'){
+    const key=normalizedPdfName(filename(src));
+    const group=byName.get(key)||[];group.push(src);byName.set(key,group);
+   }
   }
   let examined=0;
   for(const file of st.files.values()){
    if(file.size>MAX_BYTES){st.unmatched.push(file.name+' — supera 20 MB');continue}
-   const sources=bySize.get(file.size);
-   if(!sources?.length){st.unmatched.push(file.name+' — mida no inventariada');continue}
+   const sources=bySize.get(file.size)||[];
+   const candidates=byName.get(normalizedPdfName(file.name))||[];
+   if(!sources.length&&!candidates.length){
+    st.unmatched.push(file.name+' — mida i nom no coincideixen amb els pendents');continue;
+   }
    try{
     const sha=await digest(file);
     const found=sources.filter(s=>s.original_sha256.toLowerCase()===sha.toLowerCase());
-    if(!found.length){
-     st.unmatched.push(file.name+' — mida compatible però SHA-256 diferent');
-     continue;
+    if(found.length){
+     for(const src of found)if(!st.matches.has(src.id))st.matches.set(src.id,file);
+    }else if(candidates.length===1){
+     const src=candidates[0];
+     // No es considera original idèntic: només candidat a revisió visual manual.
+     const header=new Uint8Array(await file.slice(0,1024).arrayBuffer());
+     const sig=String.fromCharCode(...header);
+     if(!sig.includes('%PDF-')){
+      st.unmatched.push(file.name+' — no conté una capçalera PDF vàlida');
+     }else if(!st.variantCandidates.has(src.id)){
+      st.variantCandidates.set(src.id,{file,sha,confirmed:false});
+     }
+    }else{
+     st.unmatched.push(file.name+(candidates.length>1
+       ?' — nom ambigu, selecciona el registre manualment'
+       :' — SHA-256 diferent i no correspon a cap nom pendent'));
     }
-    for(const src of found)if(!st.matches.has(src.id))st.matches.set(src.id,file);
    }catch(error){st.unmatched.push(file.name+' — error de lectura: '+errText(error))}
    examined++;
    if(examined%5===0){
-    st.phase='Comprovant fitxers: '+examined+' amb mida inventariada…';
-    renderStats();
+    st.phase='Comprovant '+examined+' fitxers seleccionats…';renderStats();
    }
   }
   st.checked=true;
-  st.phase='Verificació completa: '+ready().length+' originals llestos per pujar. '
-    +st.unmatched.length+' fitxers sense correspondència.';
-  setNotice(ready().length?'Verificació completada. Cap fitxer no s’ha pujat encara.':
-   'No s’ha trobat cap fitxer pendent que coincideixi amb l’inventari.',!ready().length);
+  st.phase='Verificació completa: '+ready().length+' originals exactes i '+
+    st.variantCandidates.size+' PDFs candidats a versió alternativa. '+
+    st.unmatched.length+' fitxers sense correspondència.';
+  setNotice(ready().length||st.variantCandidates.size
+   ?'Verificació completada. Les versions alternatives necessiten revisió visual i confirmació.'
+   :'No s’ha trobat cap fitxer pendent que coincideixi amb l’inventari.',
+   !ready().length&&!st.variantCandidates.size);
  }finally{st.verifying=false;renderStats()}
 }
 function sanitize(value){
@@ -331,7 +377,8 @@ function exportInventory(){
  const header=['ID','Títol','Fitxer original','Bytes','SHA-256','Estat'];
  const lines=[header.map(csvSafe).join(';')];
  for(const s of st.sources){
-  const state=s.storage_path?'Pujat':st.matches.has(s.id)?'Verificat':'Pendent';
+  const state=s.storage_path?'Original exacte':st.variants.has(s.id)?'Versió alternativa revisada':
+   st.matches.has(s.id)?'Verificat':st.variantCandidates.has(s.id)?'Alternativa candidata':'Pendent';
   lines.push([s.id,s.title,filename(s),sizeOf(s),s.original_sha256,state].map(csvSafe).join(';'));
  }
  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
