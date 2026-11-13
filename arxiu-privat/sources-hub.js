@@ -37,6 +37,16 @@ async function documentCard(parent,source,alive,canUpload=true){
  text(card,'Nom original',source.original_filename);
  text(card,'Data',source.document_date);
  text(card,'Bibliografia',source.bibliography);
+ let alternative=null,variantError=null;
+ if(/\.pdf$/i.test(source.original_filename||'')){
+  const response=await db.from('archive_source_variants')
+   .select('storage_path,actual_sha256,actual_bytes,file_name,reviewed_at')
+   .eq('source_id',source.id).maybeSingle();
+  alternative=response.data;
+  variantError=response.error;
+ }
+ if(variantError)card.append(el('p','source-missing',
+  'No es poden consultar les versions alternatives: '+variantError.message));
  if(source.storage_path){
   const pdf=(source.kind==='PDF')||/\.pdf$/i.test(source.original_filename||'');
   const image=/\.(jpe?g|png|webp)$/i.test(source.original_filename||'');
@@ -52,15 +62,22 @@ async function documentCard(parent,source,alive,canUpload=true){
    finally{btn.disabled=false}
   };
   card.append(btn,preview);
- }else if(source.original_filename){
-  let alternative=null;
-  if(/\.pdf$/i.test(source.original_filename)){
-   const {data,error}=await db.from('archive_source_variants')
-    .select('storage_path,actual_sha256,actual_bytes,file_name,reviewed_at')
-    .eq('source_id',source.id).maybeSingle();
-   if(error)card.append(el('p','source-missing','No es pot consultar l’estat de les versions alternatives: '+error.message));
-   else alternative=data;
+  if(alternative){
+   card.append(el('p','source-available','També hi ha una versió alternativa d’aquest PDF, preservada per separat.'));
+   text(card,'SHA-256 de la versió alternativa',alternative.actual_sha256);
+   const altButton=el('button','source-file-button','Visualitza també la versió alternativa');
+   altButton.type='button';
+   const altPreview=el('div','document-preview');
+   altButton.onclick=async()=>{
+    altButton.disabled=true;
+    try{await window.ArchiveResearch.openPrivateFile(
+     alternative.storage_path,alternative.file_name,'application/pdf',altPreview)}
+    catch(error){WF.showError('No es pot obrir la versió alternativa: '+(error?.message||error))}
+    finally{altButton.disabled=false}
+   };
+   card.append(altButton,altPreview);
   }
+ }else if(source.original_filename){
   if(alternative){
    card.append(el('p','source-available',
     'Versió alternativa conservada (PDF revisat manualment). La còpia exacta de l’inventari continua pendent.'));
