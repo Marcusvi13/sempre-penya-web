@@ -180,7 +180,7 @@ async function render(host){
  if(!st.ui||st.host!==host){
   st.host=host;mount(host);
  }
- if(!st.loaded&&!isBusy())await refreshInventory();
+ if(!isBusy())await refreshInventory();
  else renderStats();
 }
 async function digest(file){
@@ -190,7 +190,7 @@ async function digest(file){
 }
 async function verifySelected(){
  if(isBusy())return;
- if(!crypto?.subtle){setNotice('Aquest navegador no disposa de SHA-256. Utilitza la web amb HTTPS a Chrome o Edge.',true);return}
+ if(!window.crypto?.subtle){setNotice('Aquest navegador no disposa de SHA-256. Utilitza la web amb HTTPS a Chrome o Edge.',true);return}
  if(!st.loaded&&!(await refreshInventory()))return;
  if(!st.sources.length)return;
  st.verifying=true;st.checked=false;st.matches.clear();st.unmatched=[];
