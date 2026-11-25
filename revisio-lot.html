@@ -68,6 +68,7 @@ const preset=new URLSearchParams(location.search).get("decision")||"";
 const entries=location.hash.slice(1).split("~").map(x=>x.split(".")).filter(x=>ID.test(x[0]||"")&&TOKEN.test(x[1]||""));
 const unique=new Map(entries.map(x=>[x[0],{id:x[0],token:x[1],data:null,error:"",busy:false}]));
 const items=[...unique.values()].slice(0,25);
+const remotePartners=new Map(); // Metadades sense token: altres lots del mateix compte.
 let saving=false,allSaved=false;
 history.replaceState(null,"",location.pathname+location.search);
 const reasons=window.PENYA_EDITORIAL_REASONS;
@@ -82,19 +83,23 @@ function family(d){
  if(source==="Badalona Comunicació · X"||source==="Badalona Comunicació · Instagram")return "bdn-general";
  return "";
 }
+function nearbyFor(item){return remotePartners.get(item.id)||[]}
 function partnersFor(item){
  const d=item.data;
  const time=Date.parse(d?.published_at||"");
  if(!family(d)||!platform(d)||!Number.isFinite(time))return [];
- return items.filter(other=>{
+ const local=items.filter(other=>{
   if(other.id===item.id||other.data?.status!=="pending")return false;
   const b=other.data,when=Date.parse(b.published_at||"");
   return family(b)===family(d)&&platform(b)&&platform(b)!==platform(d)
     &&Number.isFinite(when)&&Math.abs(when-time)<=12*3600000;
  });
+ // Els externs s'han validat al servidor: mateix compte, hora i contingut.
+ const crossBatch=nearbyFor(item).filter(other=>other.data?.status==="pending"&&other.data?.same_story===true);
+ return [...local,...crossBatch];
 }
 function onlyHiddenPairMatches(item,relatedId){
- const related=unique.get(relatedId);
+ const related=unique.get(relatedId)||nearbyFor(item).find(other=>other.id===relatedId);
  const a=item?.data,b=related?.data;
  const matches=Array.isArray(a?.matches)?a.matches:[];
  if(!relatedId||!a||!b||a.status!=="pending"||b.status!=="pending"||
@@ -154,7 +159,12 @@ function build(item,i){
   const w=add(choices,el("label",""));const radio=add(w,el("input",""));radio.type="radio";radio.name="decision-"+i;radio.value=value;radio.checked=value==="";add(w,el("span","",label));radios.push(radio);
  }
  const eligible=partnersFor(item);
- const suggested=eligible.filter(other=>verifiedCrosspost(item,other));
+ const nearby=nearbyFor(item);
+ if(nearby.length){
+   add(card,el("p","meta","S'han trobat "+nearby.length+" publicació/ns de l'altra xarxa en altres correus. Les possibles coincidències verificades es poden agrupar aquí, sense recuperar l'altre correu."));
+ }
+ if(item.pairLookupError)add(card,el("p","error","No s'han pogut consultar les coincidències d'altres correus: "+item.pairLookupError));
+ const suggested=eligible.filter(other=>!other.external&&verifiedCrosspost(item,other));
  const verifiedPartner=suggested.length===1?suggested[0]:null;
  const pairWrap=add(card,el("div","pair-group"));pairWrap.hidden=true;
  add(pairWrap,el("p","meta",verifiedPartner?"Mateix vídeo original verificat a X i Instagram: una sola notícia amb dos botons si prems Publica i deses.":"Hi ha una publicació de l'altra xarxa pendent. Tria expressament com vols publicar:"));
@@ -162,7 +172,7 @@ function build(item,i){
  pairSelect.add(new Option("— Tria agrupar o publicar només aquesta peça —",""));
  for(const other of eligible){
   const d=other.data;
-  pairSelect.add(new Option((platform(d)==="x"?"X":"Instagram")+" · "+String(d.title||"Publicació").slice(0,90),other.id));
+  pairSelect.add(new Option((platform(d)==="x"?"X":"Instagram")+(other.external?" (altre correu)":"")+" · "+String(d.title||"Publicació").slice(0,90),other.id));
  }
  pairSelect.add(new Option("Publicar NOMÉS aquesta peça (sense agrupar)","solo"));
  const soloConfirmWrap=add(pairWrap,el("label","check"));soloConfirmWrap.hidden=true;
@@ -196,7 +206,7 @@ function build(item,i){
  function change(){
   if(!saving){allSaved=false;setFeedback("");}
   const action=radios.find(x=>x.checked)?.value||"";
-  pairWrap.hidden=action!=="publish"||!eligible.length;
+  pairWrap.hidden=action!=="publish"||!(eligible.length||nearby.length);
   if(verifiedPartner&&pairSelect.value===verifiedPartner.id)pairConfirmWrap.hidden=true;
   if(action!=="publish"){pairSelect.value="";pairConfirm.checked=false;soloConfirm.checked=false;pairConfirmWrap.hidden=true;soloConfirmWrap.hidden=true;}
   reason.hidden=!action;reason.replaceChildren();
@@ -218,7 +228,7 @@ function build(item,i){
   related_id:pairSelect.value && pairSelect.value!=="solo"?pairSelect.value:"",
   related_token:pairSelect.value && pairSelect.value!=="solo"?(unique.get(pairSelect.value)?.token||""):"",
   confirm_pair:pairConfirm.checked,
-  pair_required:eligible.length>0,
+  pair_required:eligible.length>0||nearby.length>0,
   pair_choice:pairSelect.value,
   publish_solo_confirm:soloConfirm.checked
  });
@@ -227,7 +237,21 @@ function build(item,i){
 }
 async function load(){
  if(!items.length){$("notice").textContent="No hem trobat cap identificador vàlid. Obre el botó «Revisa totes» del correu.";return}
- const results=await Promise.all(items.map(async item=>{try{item.data=await api(item,"read")}catch(e){item.error=String(e.message||e)}return item}));
+ const results=await Promise.all(items.map(async item=>{
+  try{
+   item.data=await api(item,"read");
+   if(item.data?.status==="pending"&&family(item.data)){
+    try{
+     const response=await api(item,"pair_candidates");
+     const outside=(Array.isArray(response?.candidates)?response.candidates:[])
+       .filter(c=>ID.test(c.id||"")&&!unique.has(c.id))
+       .map(c=>({id:c.id,token:"",external:true,data:c}));
+     remotePartners.set(item.id,outside);
+    }catch(e){item.pairLookupError=String(e.message||e);}
+   }
+  }catch(e){item.error=String(e.message||e)}
+  return item;
+ }));
  $("items").replaceChildren();
  let ok=0;
  for(let i=0;i<results.length;i++){const item=results[i];if(item.data){add($("items"),build(item,i));ok++}else{const box=add($("items"),el("div","card"));add(box,el("p","error","Peça "+(i+1)+": "+item.error));}}
@@ -260,8 +284,9 @@ $("save").onclick=async()=>{
    if(p.action==="publish"&&p.related_id){
      if(!p.confirm_pair){card._status.textContent="Confirma que les dues publicacions són la mateixa notícia.";card._status.className="error";errors++;continue;}
      const partnerCard=[...document.querySelectorAll(".card")].find(c=>c.dataset.id===p.related_id);
-     if(!partnerCard||partnerCard.classList.contains("done")||partnerCard._payload?.().action){
-       card._status.textContent="L'altra proposta també té una decisió marcada. Deixa-la a «Omet» per agrupar-la.";card._status.className="error";errors++;continue;
+     const remotePartner=nearbyFor(item).find(other=>other.id===p.related_id&&other.data?.status==="pending"&&other.data?.same_story===true);
+     if((!partnerCard&&!remotePartner)||(partnerCard&&(partnerCard.classList.contains("done")||partnerCard._payload?.().action))){
+       card._status.textContent="L'altra proposta no està disponible o té una altra decisió marcada. Deixa-la a «Omet» per agrupar-la.";card._status.className="error";errors++;continue;
      }
    }
    try{

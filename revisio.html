@@ -57,6 +57,14 @@ function link(node,url){try{const u=new URL(url);if(!["https:","http:"].includes
 
 function render(data){
  current=data;
+ // Un enllaç antic de revisió individual d'X/Instagram comparteix el
+ // controlador segur amb els nous correus: ofereix parelles d'altres lots.
+ if(data.status==="pending" && / · (?:X|Instagram)$/.test(String(data.source||""))){
+   const choice=["publish","discard"].includes(directAction)?directAction:"";
+   const query="?focus="+encodeURIComponent(reviewId)+(choice?"&decision="+choice:"");
+   location.replace("revisio-lot.html"+query+"#"+reviewId+"."+token);
+   return;
+ }
  $("title").textContent=data.title;$("meta").textContent=data.source;
  $("dates").textContent="Publicada: "+date(data.published_at)+" · Primer descart: "+date(data.first_detected_at);
  $("context").textContent=data.context||"";$("reason").textContent="Motiu del radar: "+data.reason;link($("article"),data.url);

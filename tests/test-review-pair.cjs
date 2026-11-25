@@ -10,7 +10,7 @@ const js = scripts[0];
 new vm.Script(js,{filename:'revisio-lot.html'});
 for(const fragment of [
  'function partnersFor(item)', 'function family(d)', 'function platform(d)',
- 'publish_pair', 'related_id:pairSelect.value',
+ 'publish_pair', 'pair_candidates', 'related_id:pairSelect.value',
  'related_token:pairSelect.value', 'confirm_pair:pairConfirm.checked',
  'p.action==="publish"&&p.related_id', 'if(d.paired)',
  'confirm_possible_duplicate'
@@ -19,6 +19,7 @@ for(const fragment of [
    assert.ok(js.includes(fragment),'Missing pair approval control '+fragment);
 }
 const mock = {
+  remotePartners:new Map(),
   items: [
     {id:'x',data:{status:'pending',source:'Club Joventut Badalona · X',
       published_at:'2026-10-30T10:00:03Z',title:'Ante Tomic'}},
@@ -47,7 +48,7 @@ mock.items[0].data.matches=[hidden];
 const unique=new Map(mock.items.map(i=>[i.id,i]));
 const code=js.slice(js.indexOf('function platform(d)'),js.indexOf('function pendingCount()'));
 const check=(matches)=>vm.runInNewContext(code+'\n onlyHiddenPairMatches(items[0],"ig")',
-  {items:mock.items,unique});
+  {items:mock.items,unique,remotePartners:mock.remotePartners});
 assert.equal(check(),true,'Hidden exact pair is safe to reuse');
 mock.items[0].data.matches=[{...hidden,published:true}];
 assert.equal(check(),false,'Visible duplicate must require confirmation');
