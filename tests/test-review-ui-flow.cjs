@@ -117,9 +117,37 @@ async function run(reverse){
  assert.ok(first.classList.contains("done")&&second.classList.contains("done"),
    "Both original reviews must resolve from a single publication");
 }
+
+async function crossBatchTest(){
+ const h=makeHarness(false,false,true);
+ await ready(h);
+ const card=h.root.items.children[0];
+ const partner=sources[0]; // Instagram is NOT in this X-only email batch.
+ const publish=radioFor(card,"publish");
+ radioFor(card,"").checked=false;
+ publish.checked=true;
+ publish.dispatch("change");
+ const pairSelect=descendants(card).find(e=>e.tagName==="SELECT"&&e.children.some(c=>c.value===partner.id));
+ assert.ok(pairSelect,"The other email's Instagram must appear in the selector");
+ pairSelect.value=partner.id;
+ pairSelect.dispatch("change");
+ const checkboxes=descendants(card).filter(e=>e.tagName==="INPUT"&&e.type==="checkbox");
+ assert.equal(checkboxes.length,2);
+ checkboxes[1].checked=true; // Explicit approval for pairing.
+ const editorial=descendants(card).find(e=>e.tagName==="SELECT"&&e.children.some(c=>c.value==="format_value"));
+ editorial.value="format_value";
+ await h.root.save.onclick();
+ const realCalls=h.calls.filter(c=>!["read","pair_candidates"].includes(c.action));
+ assert.deepEqual(realCalls.map(c=>c.action),["probe_pair","publish_pair"]);
+ assert.equal(realCalls[1].related_id,partner.id);
+ assert.equal(realCalls[1].related_token,"","A private token from another email must never reach the browser");
+ assert.equal(realCalls[1].confirm_pair,true);
+ assert.ok(card.classList.contains("done"),"Exactly one feed entry should be confirmed");
+}
 (async()=>{
  await run(false);
  await run(true);
+ await crossBatchTest();
  const h=makeHarness(false,true);
  await ready(h);
  assert.equal(choice(h.root.items.children[0]).related_id,"",
