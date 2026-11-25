@@ -33,8 +33,8 @@ function descendants(root){
  const visit=(n)=>{if(!n)return;list.push(n);for(const c of n.children||[])visit(c);};
  visit(root);return list;
 }
-function makeHarness(reverse=false,otherVideo=false){
- const reviews=reverse?[...sources].reverse():sources;
+function makeHarness(reverse=false,otherVideo=false,crossBatch=false){
+ const reviews=crossBatch?[sources[1]]:(reverse?[...sources].reverse():sources);
  const root={};
  for(const id of ["notice","items","counter","saveFeedback","save"])root[id]=new FakeElement(id==="save"?"button":"div");
  const document={
@@ -59,6 +59,7 @@ function makeHarness(reverse=false,otherVideo=false){
   if(req.action==="read")data={id:r.id,url:r.url,source:r.source,title:"Ante Tomic",status:"pending",
     context:otherVideo&&r.source.endsWith(" · X")?"A different video":r.context,
     published_at:r.date,first_detected_at:"2026-10-30T12:45:00Z",reason:"Comprovada",matches:[]};
+  else if(req.action==="pair_candidates")data={candidates:crossBatch?[{id:sources[0].id,source:sources[0].source,title:"Ante Tomic",url:sources[0].url,published_at:sources[0].date,status:"pending",same_story:true}]:[]};
   else if(req.action==="probe_pair")data={ok:true,dry_run:true,result:{paired:true,status:"published"}};
   else if(req.action==="publish_pair")data={status:"published",paired:true,news_id:"single-news-id"};
   else if(req.action==="publish")throw Error("BUG: a verified pair was published as a single post");
@@ -73,13 +74,13 @@ function makeHarness(reverse=false,otherVideo=false){
  history:{replaceState(){}},URLSearchParams,Date,Option:class{constructor(text,value){this.text=text;this.value=value;}},
  console};
  vm.runInNewContext(js,context,{filename:"revisio-lot.html",timeout:4000});
- return {calls,root,document,reviews};
+ return {calls,root,document,reviews,crossBatch};
 }
 function radioFor(card,value){return descendants(card).find(e=>e.tagName==="INPUT"&&e.type==="radio"&&e.value===value);}
 function choice(card){return card._payload();}
 async function ready(h){
- for(let i=0;i<20&&h.root.items.children.length!==2;i++)await new Promise(resolve=>setImmediate(resolve));
- assert.equal(h.root.items.children.length,2,"Both social reviews must load");
+ for(let i=0;i<20&&h.root.items.children.length!==(h.crossBatch?1:2);i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(h.root.items.children.length,h.crossBatch?1:2,"All reviews in this mail lot must load");
 }
 async function run(reverse){
  const h=makeHarness(reverse);
@@ -107,7 +108,7 @@ async function run(reverse){
  editorial.value="format_value";
  assert.equal(h.root.save.disabled,false,"Save must be enabled");
  await h.root.save.onclick();
- assert.deepEqual(h.calls.filter(c=>c.action!=="read").map(c=>c.action),["probe_pair","publish_pair"]);
+ assert.deepEqual(h.calls.filter(c=>!["read","pair_candidates"].includes(c.action)).map(c=>c.action),["probe_pair","publish_pair"]);
  const pub=h.calls.find(c=>c.action==="publish_pair");
  assert.equal(pub.id,target.id);
  assert.equal(pub.related_id,pair.id);
