@@ -1,0 +1,9 @@
+Sempre Penya — gràfics per a Google Play
+Origen: recursos ja utilitzats a la web de producció Sempre Penya.
+Escut: cjb_logo.png de la branca principal del lloc web.
+Icona: mateix cercle blanc, filet verd i escut que apple-touch-icon.png,
+        regenerats amb resolució 512 x 512 des de l'escut original.
+Imatge promocional: mateix escut i colors corporatius de la capçalera
+        actual del web; composició horitzontal adaptada a 1024 x 500.
+No s'ha alterat ni redibuixat l'escut ni canviat els seus colors.
+Cal obtenir captures reals de l'app per completar Google Play.
